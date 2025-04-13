@@ -1,20 +1,4 @@
-const mongoose = require('mongoose');
-
-// 定义 MongoDB 数据模型
-const PageView = mongoose.model('PageView', new mongoose.Schema({
-  name: String,
-  value: Number,
-}));
-
-const UserInteraction = mongoose.model('UserInteraction', new mongoose.Schema({
-  action: String,
-  count: Number,
-}));
-
-const FileTypeDistribution = mongoose.model('FileTypeDistribution', new mongoose.Schema({
-  fileName: String,
-  value: Number,
-}));
+const { PageView, UserInteraction, FileTypeDistribution } = require('../models/DataAnalytics'); // 导入模型
 
 // Controller methods
 const getPageViews = async (req, res) => {
