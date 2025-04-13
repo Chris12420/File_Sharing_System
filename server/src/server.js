@@ -52,7 +52,9 @@ app.get('/', (req, res) => {
 const fileRoutes = require('./routes/fileRoutes'); // Import the file routes
 const userRoutes = require('./routes/userRoutes'); // Import the user routes
 const authRoutes = require('./routes/authRoutes'); // Import the auth routes
+const analyticsRoutes = require('./routes/analyticsRoutes.js'); // Import the analytics routes
 
+app.use('/api/analytics', analyticsRoutes); // Mount the analytics routes under /api/analytics
 app.use('/api/files', fileRoutes); // Mount the file routes under /api/files
 app.use('/api/users', userRoutes); // Mount the user routes under /api/users
 app.use('/api/auth', authRoutes); // Mount the auth routes under /api/auth
