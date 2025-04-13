@@ -413,8 +413,32 @@ const FilesView: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    console.log(`Deleting file ${id} (API call needed)`);
-    setFiles(files.filter(file => file.id !== id));
+    // 显示确认提示
+    const confirmDelete = window.confirm('Confirm delete this file');
+    if (!confirmDelete) {
+      return; // 如果用户取消，则退出函数
+    }
+  
+    try {
+      // 调用后端 API 删除文件
+      const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/api/files/${id}`;
+      const response = await fetch(apiUrl, {
+        method: 'DELETE',
+        credentials: 'include', // 确保发送会话 cookie
+      });
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete file');
+      }
+  
+      // 从前端状态中移除文件
+      setFiles((prevFiles) => prevFiles.filter((file) => file.id !== id));
+      console.log(`File ${id} deleted successfully.`);
+    } catch (error: any) {
+      console.error(`Error deleting file ${id}:`, error.message || error);
+      setError(error.message || 'An error occurred while deleting the file.');
+    }
   };
 
   const handleShare = (file: FileItem) => {

@@ -5,6 +5,23 @@ const multer = require('multer');
 const mongoose = require('mongoose');
 const config = require('../config/db'); // Assuming config loads .env
 const stream = require('stream'); // Import stream module
+const { UserInteraction } = require('../models/DataAnalytics'); 
+
+
+
+const updateUserInteraction = async (action) => {
+  try {
+    const interaction = await UserInteraction.findOneAndUpdate(
+      { action },
+      { $inc: { count: 1 } }, // 增加 count 字段的值
+      { new: true, upsert: true } // 如果不存在则创建
+    );
+    console.log(`User interaction updated: ${action}, new count: ${interaction.count}`);
+  } catch (error) {
+    console.error(`Error updating user interaction for action: ${action}`, error);
+  }
+};
+
 
 // Initialize GridFSBucket
 let gfsBucket;
@@ -110,6 +127,8 @@ const uploadFile = async (req, res) => {
 
             await newFile.save();
             console.log('File metadata saved to DB:', newFile._id);
+            
+            await updateUserInteraction('Upload');
 
             // Respond to client
             res.status(201).json({
@@ -222,9 +241,15 @@ const downloadFile = async (req, res) => {
 
 
     // Pipe the GridFS stream directly to the response
-    downloadStream.pipe(res).on('finish', () => {
+    downloadStream.pipe(res).on('finish', async() => {
         console.log(`File ${fileMetadata.originalName} downloaded successfully.`);
         // res.end() is called automatically by pipe on finish
+        // Update user interaction for download
+        try {
+          await updateUserInteraction('Download'); // 更新用户交互数据
+        } catch (error) {
+          console.error('Error updating user interaction for download:', error);
+        }
     }).on('error', (pipeError) => {
         // Handle errors during the piping process (e.g., client disconnects)
         console.error('Error piping download stream to response:', pipeError);
@@ -307,6 +332,7 @@ const deleteFile = async (req, res) => {
     await File.findByIdAndDelete(req.params.id);
     console.log(`File metadata deleted from DB: ${req.params.id}`);
 
+    await updateUserInteraction('Delete'); 
 
     res.status(200).json({ message: 'File deleted successfully' });
   } catch (error) {
