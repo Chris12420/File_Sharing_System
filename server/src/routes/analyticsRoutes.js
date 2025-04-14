@@ -11,4 +11,8 @@ router.get('/user-interactions', analyticsController.getUserInteractions);
 // GET /api/analytics/file-type-distribution
 router.get('/file-type-distribution', analyticsController.getFileTypeDistribution);
 
+
+// Increment PageView for the current day
+router.post('/page-view', analyticsController.incrementPageView);
+
 module.exports = router;

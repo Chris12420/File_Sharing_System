@@ -17,16 +17,21 @@ const insertTestData = async () => {
 
     console.log('Inserting test data into MongoDB...');
 
-    await PageView.insertMany([
-      { name: 'Mar 25', value: 166 },
-      { name: 'Mar 26', value: 120 },
-      { name: 'Mar 27', value: 145 },
-      { name: 'Mar 28', value: 156 },
-      { name: 'Mar 29', value: 182 },
-      { name: 'Mar 30', value: 210 },
-      { name: 'Mar 31', value: 195 }
-    ]);
-
+    const getLast7Days = () => {
+      const days = [];
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        days.push({
+          name: date.toISOString().split('T')[0], // 格式化为 YYYY-MM-DD
+          value: Math.floor(Math.random() * 200) + 100, // 随机生成 100-300 的值
+        });
+      }
+      return days;
+    };
+    
+    await PageView.insertMany(getLast7Days());
+    
     await UserInteraction.insertMany([
       { action: 'Upload', count: 245 },
       { action: 'Download', count: 689 },

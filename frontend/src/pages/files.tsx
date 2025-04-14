@@ -270,6 +270,8 @@ const FilesView: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ id: string; username: string; role: string } | null>(null);
 
+
+
   // Check authentication status
   useEffect(() => {
     const checkAuth = async () => {

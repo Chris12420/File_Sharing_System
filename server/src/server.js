@@ -1,6 +1,12 @@
 // Load environment variables
 require('dotenv').config();
 
+
+const { scheduleDailyPageViewReset } = require('./cronJobs.js'); 
+scheduleDailyPageViewReset();
+
+
+
 // Import necessary modules
 const express = require('express');
 const cors = require('cors');

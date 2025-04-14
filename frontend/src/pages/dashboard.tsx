@@ -64,24 +64,26 @@ const DashboardView: React.FC = () => {
 
       {/* Page Views Section */}
       <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">Page Views (Last 7 Days)</h2>
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="h-64 flex items-end">
-            {pageViewsData.map((item, index) => (
-              <div key={index} className="flex-1 flex flex-col items-center">
-                <div
-                  className="w-full mx-1 bg-purple-500 rounded-t"
-                  style={{ height: `${(item.value / Math.max(...pageViewsData.map(d => d.value))) * 170}px` }}
-                ></div>
-                <span className="text-xs mt-2">{item.name}</span>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 text-gray-600 text-sm">
-            <p>Track user activity and identify peak usage times.</p>
-          </div>
+      <h2 className="text-xl font-semibold mb-4">Page Views (Last 7 Days)</h2>
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="h-64 flex items-end">
+          {pageViewsData.map((item, index) => (
+            <div key={index} className="flex-1 flex flex-col items-center">
+              <div
+                className="w-full mx-1 bg-purple-500 rounded-t"
+                style={{ height: `${(item.value / Math.max(...pageViewsData.map(d => d.value))) * 170}px` }}
+              ></div>
+              {/* 添加数值显示 */}
+              <span className="text-sm font-medium mt-1">{item.value}</span>
+              <span className="text-xs mt-2">{item.name}</span>
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 text-gray-600 text-sm">
+          <p>Track user activity and identify peak usage times.</p>
         </div>
       </div>
+    </div>
 
       {/* User Interactions Section */}
       <div className="mb-8">

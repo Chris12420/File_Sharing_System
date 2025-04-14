@@ -31,8 +31,26 @@ const getFileTypeDistribution = async (req, res) => {
   }
 };
 
+
+// Increment PageView for the current day
+const incrementPageView = async () => {
+  try {
+    const today = new Date().toISOString().split('T')[0]; // 获取当前日期 (YYYY-MM-DD)
+    const pageView = await PageView.findOneAndUpdate(
+      { name: today }, // 查找当天的记录
+      { $inc: { value: 1 } }, // 将 value 字段加 1
+      { new: true, upsert: true } // 如果不存在则创建
+    );
+    console.log(`Page view incremented for ${today}:`, pageView.value);
+  } catch (error) {
+    console.error('Error incrementing page view:', error);
+  }
+};
+
+
 module.exports = {
   getPageViews,
   getUserInteractions,
   getFileTypeDistribution,
+  incrementPageView
 };

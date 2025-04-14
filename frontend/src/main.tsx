@@ -5,9 +5,7 @@ import App from './App'; // We will create this App component later
 import './styles/globals.css'; // Assuming global styles are here
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
     <BrowserRouter>
       <App />
     </BrowserRouter>
-  </React.StrictMode>
 ); 

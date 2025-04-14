@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout'; // Assuming Layout component exists
 import HomePage from './pages/index';
@@ -11,6 +11,25 @@ import UsersPage from './pages/users';
 import './styles/globals.css';
 
 function App() {
+  useEffect(() => {
+    const incrementPageView = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/analytics/page-view`, {
+          method: 'POST',
+          credentials: 'include', // 确保发送会话 cookie
+        });
+        if (!response.ok) {
+          throw new Error('Failed to increment page view');
+        }
+        console.log('Page view incremented');
+      } catch (error) {
+        console.error('Error incrementing page view:', error);
+      }
+    };
+
+    incrementPageView();
+  }, []);
+  
   return (
     <Layout>
       <Routes>
