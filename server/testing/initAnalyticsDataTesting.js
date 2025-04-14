@@ -31,7 +31,7 @@ const insertTestData = async () => {
     };
     
     await PageView.insertMany(getLast7Days());
-    
+
     await UserInteraction.insertMany([
       { action: 'Upload', count: 245 },
       { action: 'Download', count: 689 },
@@ -43,7 +43,8 @@ const insertTestData = async () => {
       { fileName: 'Documents', value: 65 },
       { fileName: 'Images', value: 20 },
       { fileName: 'Videos', value: 10 },
-      { fileName: 'Audio', value: 5 }
+      { fileName: 'Audio', value: 5 },
+      { fileName: 'other', value: 7 }
     ]);
 
     console.log('Test data inserted successfully');
