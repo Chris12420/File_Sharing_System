@@ -31,7 +31,7 @@ const getFileTypeDistribution = async (req, res) => {
             $cond: [
               { $ifNull: ["$mimeType", false] }, // 如果 mimeType 为 null
               { $arrayElemAt: [{ $split: ["$mimeType", "/"] }, 0] }, // 提取主类型
-              "Unknown" // 如果 mimeType 为 null，则设置为 "Unknown"
+              "Other" // 如果 mimeType 为 null，则设置为 "Other"
             ]
           },
           count: { $sum: 1 } // 统计每种类型的数量
@@ -49,7 +49,7 @@ const getFileTypeDistribution = async (req, res) => {
 
     // 格式化数据为前端需要的格式
     const fileTypeDistribution = fileTypeCounts.map((fileType) => ({
-      fileName: fileType._id || "Unknown", // 主类型或 "Unknown"
+      fileName: fileType._id || "Other", // 主类型或 "Other"
       value: ((fileType.count / totalFiles) * 100).toFixed(2) // 百分比值，保留两位小数
     }));
 
