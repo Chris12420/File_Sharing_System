@@ -61,12 +61,14 @@ const userRoutes = require('./routes/userRoutes'); // Import the user routes
 const authRoutes = require('./routes/authRoutes'); // Import the auth routes
 const analyticsRoutes = require('./routes/analyticsRoutes.js'); // Import the analytics routes
 const groupRoutes = require('./routes/groupRoutes'); // Import the group routes
+const settingRoutes = require('./routes/settingRoutes'); // Import the setting routes
 
 app.use('/api/analytics', analyticsRoutes); // Mount the analytics routes under /api/analytics
 app.use('/api/files', fileRoutes); // Mount the file routes under /api/files
 app.use('/api/users', userRoutes); // Mount the user routes under /api/users
 app.use('/api/auth', authRoutes); // Mount the auth routes under /api/auth
 app.use('/api/groups', groupRoutes); // Mount the group routes under /api/groups
+app.use('/api/settings', settingRoutes); // Mount the setting routes under /api/settings
 
 // Define the port
 const PORT = process.env.PORT || 5001; // Use environment variable or default to 5001

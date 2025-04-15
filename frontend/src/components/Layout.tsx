@@ -10,6 +10,7 @@ export interface User {
   id: string;
   username: string;
   role: string;
+  email?: string; // Add optional email field
   // Add email if needed later
 }
 
