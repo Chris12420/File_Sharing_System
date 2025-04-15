@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Users, FolderPlus, File, Image, FileText, Music, Video, Upload, UserPlus, Trash2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Users, FolderPlus, File, Image, FileText, Music, Video, Upload, UserPlus, Trash2, Download } from 'lucide-react';
 import axios from 'axios';
 import AddMemberModal from '../components/AddMemberModal';
 
@@ -53,6 +53,11 @@ const GroupFiles: React.FC = () => {
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
   const [addMemberLoading, setAddMemberLoading] = useState(false);
   const [addMemberError, setAddMemberError] = useState<string | null>(null);
+  const [fileActionLoading, setFileActionLoading] = useState<string | null>(null); // Store ID of file being acted upon
+  const [fileActionError, setFileActionError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  // Ref for the hidden file input
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch user's groups on component mount
   useEffect(() => {
@@ -158,8 +163,39 @@ const GroupFiles: React.FC = () => {
   };
 
   // Placeholder: Add API calls for delete, add member, upload
-  const handleDeleteFile = (fileId: string) => {
-    console.log(`TODO: API call to delete file ${fileId} from group ${selectedGroupId}`);
+  const handleDeleteFile = async (fileId: string) => {
+    // Confirmation dialog
+    if (!window.confirm('Are you sure you want to delete this file permanently?')) {
+      return;
+    }
+
+    setFileActionLoading(fileId); // Indicate loading for this specific file
+    setFileActionError(null);
+
+    try {
+      await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/api/files/${fileId}`, {
+        withCredentials: true,
+      });
+      // Remove file from state on success
+      setCurrentFiles(prevFiles => prevFiles.filter(f => f.id !== fileId));
+      console.log(`File ${fileId} deleted successfully.`);
+    } catch (err: any) {
+      console.error(`Error deleting file ${fileId}:`, err);
+      setFileActionError(`Failed to delete file: ${err.response?.data?.message || err.message}`);
+      // Optionally show error more prominently
+    } finally {
+      setFileActionLoading(null); // Clear loading state
+    }
+  };
+
+  // Add download handler
+  const handleDownloadGroupFile = (fileId: string) => {
+    // Construct the download URL using environment variable
+    const downloadUrl = `${import.meta.env.VITE_API_BASE_URL}/api/files/download/${fileId}`;
+    // Open the URL in a new tab (or same tab) to trigger download
+    window.open(downloadUrl, '_blank');
+    // Optionally track download interaction if needed
+    console.log(`Download triggered for file: ${fileId}`);
   };
 
   // Open the Add Member modal
@@ -195,8 +231,58 @@ const GroupFiles: React.FC = () => {
     }
   };
 
+  // Trigger the hidden file input
   const handleUploadFile = () => {
-      console.log(`TODO: Open modal/trigger input and API call to upload file to group ${selectedGroupId}`);
+    if (!selectedGroupId) return;
+    setFileActionError(null); // Clear previous errors
+    fileInputRef.current?.click(); // Click the hidden input
+  };
+
+  // Handle the actual file upload after selection
+  const handleFileSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || event.target.files.length === 0 || !selectedGroupId) {
+      return; // No file selected or no group selected
+    }
+    const file = event.target.files[0];
+    event.target.value = ''; // Reset input immediately to allow re-uploading same file
+
+    setIsUploading(true);
+    setFileActionError(null);
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_BASE_URL}/api/groups/${selectedGroupId}/files`,
+        formData,
+        {
+          withCredentials: true,
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+
+      // Add the newly uploaded file to the state
+      const newFileData = response.data.file; // Assuming backend returns the populated file object
+      const newFile: GroupFile = {
+          id: newFileData._id,
+          name: newFileData.originalName,
+          size: formatSize(newFileData.size || 0),
+          type: newFileData.mimeType?.split('/')[0] || 'document',
+          uploadDate: formatDate(newFileData.createdAt || Date.now()),
+          uploadedBy: newFileData.ownerId?.username || 'Unknown'
+      };
+      setCurrentFiles(prevFiles => [newFile, ...prevFiles]); // Add to the top
+      console.log('File uploaded to group successfully:', newFile);
+
+    } catch (err: any) {
+      console.error('Error uploading file to group:', err);
+      setFileActionError(`Upload failed: ${err.response?.data?.message || err.message}`);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   // Helper function (example)
@@ -215,7 +301,14 @@ const GroupFiles: React.FC = () => {
 
   return (
     <div className="p-6 flex gap-6 h-full">
-      
+       {/* Hidden File Input */}
+       <input 
+          type="file" 
+          ref={fileInputRef} 
+          onChange={handleFileSelected} 
+          style={{ display: 'none' }} 
+       />
+
       {/* Left Column: Group List */}
       <div className="w-1/4 bg-white rounded-lg shadow p-4 flex flex-col">
         <h2 className="text-lg font-semibold mb-4 border-b pb-2">Your Groups</h2>
@@ -320,8 +413,16 @@ const GroupFiles: React.FC = () => {
                  <button onClick={handleAddMember} className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm flex items-center gap-1">
                     <UserPlus size={16} /> Add Member
                  </button>
-                 <button onClick={handleUploadFile} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center gap-1">
-                   <Upload size={16} /> Upload File
+                 <button 
+                    onClick={handleUploadFile} 
+                    disabled={isUploading} // Disable while uploading
+                    className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                 >
+                   {isUploading ? (
+                     <><span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></span> Uploading...</>
+                   ) : (
+                     <><Upload size={16} /> Upload File</>
+                   )}
                  </button>
               </div>
             </div>
@@ -352,6 +453,8 @@ const GroupFiles: React.FC = () => {
               {/* Files Section */}
               <div className="w-full md:w-2/3 flex flex-col">
                  <h3 className="text-lg font-semibold mb-3">Group Files ({currentFiles.length})</h3>
+                 {/* Display Uploading state? Maybe a subtle indicator? */}
+                 {isUploading && <p className='text-sm text-blue-600'>Uploading file...</p>}
                  <div className="overflow-y-auto flex-grow">
                     {currentFiles.length === 0 ? (
                         <div className="flex-grow flex items-center justify-center text-gray-400">
@@ -370,7 +473,7 @@ const GroupFiles: React.FC = () => {
                           </thead>
                           <tbody className="divide-y divide-gray-100">
                             {currentFiles.map(file => (
-                               <tr key={file.id} className="hover:bg-gray-50">
+                               <tr key={file.id} className={`hover:bg-gray-50 ${fileActionLoading === file.id ? 'opacity-50' : ''}`}>
                                  <td className="py-2 px-3">
                                     <div className="flex items-center gap-2">
                                        <FileIcon fileType={file.type} />
@@ -382,12 +485,25 @@ const GroupFiles: React.FC = () => {
                                  <td className="py-2 px-3 text-gray-500">{file.uploadDate}</td>
                                  <td className="py-2 px-3">
                                     <div className="flex justify-end gap-1">
-                                       <button 
-                                          className="p-1 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
-                                          title="Delete"
-                                          onClick={() => handleDeleteFile(file.id)}
+                                       <button
+                                         className="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                                         title="Download"
+                                         onClick={() => handleDownloadGroupFile(file.id)}
+                                         disabled={fileActionLoading === file.id} // Disable while action is in progress
                                        >
-                                          <Trash2 size={16} />
+                                         <Download size={16} />
+                                       </button>
+                                       <button
+                                         className="p-1 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                                         title="Delete"
+                                         onClick={() => handleDeleteFile(file.id)}
+                                         disabled={fileActionLoading === file.id} // Disable while action is in progress
+                                       >
+                                         {fileActionLoading === file.id ? (
+                                              <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-500 inline-block"></span>
+                                         ) : (
+                                              <Trash2 size={16} />
+                                         )}
                                        </button>
                                     </div>
                                  </td>
@@ -397,6 +513,10 @@ const GroupFiles: React.FC = () => {
                        </table>
                     )}
                  </div>
+                 {/* Display file action error */}
+                 {fileActionError && (
+                    <p className="text-red-500 text-sm mt-2">Error: {fileActionError}</p>
+                 )}
               </div>
             </div>
             {/* Render AddMemberModal */}

@@ -6,6 +6,7 @@ const mongoose = require('mongoose');
 const config = require('../config/db'); // Assuming config loads .env
 const stream = require('stream'); // Import stream module
 const { UserInteraction } = require('../models/DataAnalytics'); 
+const Group = require('../models/Group'); // Import Group model for membership check
 
 
 
@@ -178,24 +179,44 @@ const uploadFile = async (req, res) => {
 
 const downloadFile = async (req, res) => {
   try {
-    const fileMetadata = await File.findById(req.params.id); // Find our metadata record
+    const fileMetadata = await File.findById(req.params.id);
     if (!fileMetadata) {
       console.log(`File metadata not found for ID: ${req.params.id}`);
       return res.status(404).json({ message: 'File metadata not found' });
     }
 
     if (!fileMetadata.gridfsId) {
-        console.log(`GridFS ID missing for metadata ID: ${req.params.id}`);
-        return res.status(404).json({ message: 'File data reference not found' });
+      console.log(`GridFS ID missing for metadata ID: ${req.params.id}`);
+      return res.status(404).json({ message: 'File data reference not found' });
     }
 
+    // --- Authorization Check ---
+    const userId = req.user.id;
+    if (fileMetadata.groupId) { // It's a group file
+      const group = await Group.findById(fileMetadata.groupId);
+      if (!group) {
+          // File metadata points to a non-existent group (data inconsistency)
+          console.error(`Group ${fileMetadata.groupId} not found for file ${fileMetadata._id}`);
+          return res.status(404).json({ message: 'Associated group not found' });
+      }
+      const isMember = group.members.some(member => member.user.toString() === userId);
+      if (!isMember) {
+          console.log(`User ${userId} is not a member of group ${fileMetadata.groupId}`);
+          return res.status(403).json({ message: 'You do not have permission to download this file' });
+      }
+    } else { // It's a personal file
+      if (fileMetadata.ownerId.toString() !== userId) {
+          console.log(`User ${userId} is not the owner of personal file ${fileMetadata._id}`);
+          return res.status(403).json({ message: 'You do not have permission to download this file' });
+      }
+    }
+    // --- End Authorization Check ---
 
     // Check if gfsBucket is initialized
     if (!gfsBucket) {
       console.error("GridFSBucket not initialized. Check DB connection.");
       return res.status(500).json({ message: 'Storage service not available' });
     }
-
 
     // Get the GridFS file ID from our metadata
     // Ensure gridfsId is converted to ObjectId for lookup
@@ -206,7 +227,6 @@ const downloadFile = async (req, res) => {
         console.error('Invalid GridFS ID format in metadata:', fileMetadata.gridfsId, castError);
         return res.status(500).json({ message: 'Internal file reference error' });
     }
-
 
     // Check if file exists in GridFS by attempting to open download stream
     // This is more direct than find().toArray()
@@ -292,10 +312,36 @@ const deleteFile = async (req, res) => {
       return res.status(404).json({ message: 'File metadata not found' });
     }
 
-    // Authorization check
-    if (req.session.user.role !== 'admin' && fileMetadata.uploadedBy.toString() !== req.session.user.id) {
-      return res.status(403).json({ message: 'Not authorized to delete this file' });
+    // --- Authorization Check ---
+    const userId = req.user.id;
+    let canDelete = false;
+
+    if (fileMetadata.groupId) { // It's a group file
+      const group = await Group.findById(fileMetadata.groupId);
+      if (group) { // Ensure group exists
+        const membership = group.members.find(member => member.user.toString() === userId);
+        // Can delete if group admin OR the original uploader
+        if ((membership && membership.role === 'admin') || fileMetadata.ownerId.toString() === userId) {
+            canDelete = true;
+        }
+      } else {
+         console.warn(`Group ${fileMetadata.groupId} not found for file ${fileMetadata._id} during delete attempt.`);
+         // Decide if deletion should proceed if group is gone - likely yes if owner matches
+         if (fileMetadata.ownerId.toString() === userId) {
+             canDelete = true; // Allow owner to delete even if group is gone
+         }
+      }
+    } else { // It's a personal file
+      // Can delete if owner
+      if (fileMetadata.ownerId.toString() === userId) {
+          canDelete = true;
+      }
     }
+
+    if (!canDelete) {
+       return res.status(403).json({ message: 'You do not have permission to delete this file' });
+    }
+    // --- End Authorization Check ---
 
     // Check if gfsBucket is initialized
     if (!gfsBucket) {

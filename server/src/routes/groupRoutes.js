@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const groupController = require('../controllers/groupController');
 const { isAuthenticated } = require('../middleware/authMiddleware');
-// const upload = require('../middleware/uploadMiddleware'); // Temporarily comment out - seems missing
+const upload = require('../middleware/uploadMiddleware');
 
 // Apply authentication middleware to all group routes
 router.use(isAuthenticated);
@@ -37,8 +37,7 @@ router.delete('/:groupId/members/:userId', groupController.removeMember);
 // --- Group File Routes ---
 
 // Upload a file to the group
-// router.post('/:groupId/files', upload.single('file'), groupController.uploadGroupFile); // Comment out usage of upload
-router.post('/:groupId/files', groupController.uploadGroupFile); // Temporarily remove upload middleware usage
+router.post('/:groupId/files', upload.single('file'), groupController.uploadGroupFile);
 
 // Get files for a specific group (Could be part of getGroupDetails or separate)
 // router.get('/:groupId/files', groupController.getGroupFiles);
