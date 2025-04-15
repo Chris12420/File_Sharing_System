@@ -38,8 +38,8 @@ const LoginPage: React.FC = () => {
         throw new Error(data.message || 'Login failed');
       }
 
-      // Login successful, redirect to files page
-      navigate('/files');
+      // Login successful, redirect to home page and force refresh
+      window.location.href = '/'; // Force refresh to trigger Layout auth check
     } catch (err: any) {
       console.error('Login error:', err);
       if (err.message === 'Failed to fetch') {

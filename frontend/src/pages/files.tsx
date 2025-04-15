@@ -607,23 +607,6 @@ const FilesView: React.FC = () => {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Your Files</h1>
-        <div className="flex items-center gap-4">
-          {isAuthenticated && currentUser && (
-            <span className="text-sm text-gray-600">Welcome, {currentUser.username}!</span>
-          )}
-          {isAuthenticated ? (
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
-            >
-              Logout
-            </button>
-          ) : (
-            <Link to="/login" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
-              Login
-            </Link>
-          )}
-        </div>
       </div>
       
       {/* File Filters */}
