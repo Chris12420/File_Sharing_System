@@ -17,6 +17,7 @@
     "@types/react": "^18.2.60",
     "@types/react-dom": "^18.2.19",
     "autoprefixer": "^10.4.17",
+    "axios": "^1.8.4",
     "file_sharing_frontend": "file:",
     "formidable": "^3.5.2",
     "lucide-react": "^0.336.0",

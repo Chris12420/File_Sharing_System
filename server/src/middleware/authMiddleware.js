@@ -1,7 +1,8 @@
 const isAuthenticated = (req, res, next) => {
   // Check if the user object exists on the session
   if (req.session && req.session.user) {
-    // User is authenticated, proceed to the next middleware/route handler
+    // User is authenticated, attach user info to req.user
+    req.user = req.session.user;
     return next();
   } else {
     // User is not authenticated, send an unauthorized response

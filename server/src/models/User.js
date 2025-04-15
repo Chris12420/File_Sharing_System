@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { Schema } = require('mongoose');
 
 // Define possible user roles
 const USER_ROLES = ['admin', 'user'];
@@ -27,15 +28,15 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: USER_ROLES,
     default: 'user'
-  }
+  },
+  groups: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Group'
+  }]
 }, {
   timestamps: true, // This will add createdAt and updatedAt fields
   collection: 'users' // Explicitly set the collection name
 });
-
-// Create indexes
-userSchema.index({ email: 1 }, { unique: true });
-userSchema.index({ username: 1 }, { unique: true });
 
 const User = mongoose.model('User', userSchema);
 

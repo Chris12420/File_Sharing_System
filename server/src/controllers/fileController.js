@@ -122,7 +122,10 @@ const uploadFile = async (req, res) => {
                 gridfsId: savedFileInfo._id, // Use ID from fetched doc
                 size: savedFileInfo.length, // Use size from fetched doc
                 mimeType: savedFileInfo.contentType, // Use contentType from fetched doc
-                uploadedBy: req.session.user.id
+                uploadedBy: req.user.id, // Use req.user instead of req.session.user
+                ownerId: req.user.id,    // Set required ownerId field
+                isPublic: false,         // Set required isPublic field (defaulting to false)
+                // groupId: null // Explicitly null for personal files, or leave as default if schema allows
             });
 
             await newFile.save();
