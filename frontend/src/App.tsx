@@ -8,6 +8,7 @@ import DashboardPage from './pages/dashboard';
 import FilesPage from './pages/files';
 import SettingsPage from './pages/settings';
 import UsersPage from './pages/users';
+import GroupFiles from './pages/GroupFiles'; // Import the new component
 import './styles/globals.css';
 
 function App() {
@@ -40,6 +41,7 @@ function App() {
         <Route path="/files" element={<FilesPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/users" element={<UsersPage />} />
+        <Route path="/groups" element={<GroupFiles />} />
         {/* Add other routes as needed */}
       </Routes>
     </Layout>

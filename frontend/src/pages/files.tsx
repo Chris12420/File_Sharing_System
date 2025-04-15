@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Trash2, Download, Share2, Upload, File, FileText, Music, Video, Image } from 'lucide-react';
 import { Link } from 'react-router-dom'; // Import Link from react-router-dom
 
@@ -150,44 +150,85 @@ interface FileListProps {
   onShare: (file: FileItem) => void;
   uploading: boolean;
   onUpload: (files: FileList) => void;
+  sortConfig: { key: keyof FileItem | null; direction: 'ascending' | 'descending' };
+  requestSort: (key: keyof FileItem) => void;
 }
 
-const FileListTable: React.FC<FileListProps> = ({ files, onDelete, onShare, uploading, onUpload }) => {
+const FileListTable: React.FC<FileListProps> = ({ 
+  files, 
+  onDelete, 
+  onShare, 
+  uploading, 
+  onUpload, 
+  sortConfig,
+  requestSort
+}) => {
+  // Helper to get sort indicator
+  const getSortIndicator = (key: keyof FileItem) => {
+    if (sortConfig.key !== key) return null;
+    return sortConfig.direction === 'ascending' ? ' ▲' : ' ▼';
+  };
+
   if (files.length === 0 && !uploading) {
-    return (
-      <div className="text-center py-6">
-        <File size={48} className="mx-auto text-gray-400 mb-4" />
-        <p className="text-gray-500 mb-6">No files uploaded yet</p>
-        <DragDropUpload onUpload={onUpload} />
-      </div>
-    );
+    // Check if files prop itself is empty (could be due to filtering)
+    // The original check for "No files uploaded yet" is handled in FilesView now
+    // This section might not be needed anymore depending on FilesView logic
+    // We'll keep the table structure for when filters result in empty list
+    // return (
+    //   <div className="text-center py-6">
+    //     <File size={48} className="mx-auto text-gray-400 mb-4" />
+    //     <p className="text-gray-500 mb-6">No files match your current filters.</p>
+    //     {/* Keep upload accessible even if filtered list is empty? Or move upload elsewhere? */}
+    //     {/* <DragDropUpload onUpload={onUpload} /> */}
+    //   </div>
+    // );
   }
 
   return (
     <div>
-      <div className="mb-6">
+      {/* Upload component is now usually rendered outside/above the table in FilesView */}
+      {/* <div className="mb-6">
         <DragDropUpload onUpload={onUpload} />
-      </div>
+      </div> */}
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-gray-50">
             <tr>
-              <th className="text-left py-3 px-4">Name</th>
-              <th className="text-left py-3 px-4">Size</th>
-              <th className="text-left py-3 px-4">Uploaded</th>
-              <th className="text-left py-3 px-4">Status</th>
-              <th className="text-right py-3 px-4">Actions</th>
+              {/* Make headers clickable and add indicators */}
+              <th className="text-left py-3 px-4 cursor-pointer hover:bg-gray-100 select-none" onClick={() => requestSort('name')}>
+                Name{getSortIndicator('name')}
+              </th>
+              <th className="text-left py-3 px-4 cursor-pointer hover:bg-gray-100 select-none" onClick={() => requestSort('size')}>
+                Size{getSortIndicator('size')}
+              </th>
+              <th className="text-left py-3 px-4 cursor-pointer hover:bg-gray-100 select-none" onClick={() => requestSort('uploadDate')}>
+                Uploaded{getSortIndicator('uploadDate')}
+              </th>
+              {/* Make Status header clickable and add indicator */}
+              <th className="text-left py-3 px-4 cursor-pointer hover:bg-gray-100 select-none" onClick={() => requestSort('shared')}>
+                Status{getSortIndicator('shared')}
+              </th>
+              <th className="text-right py-3 px-4 select-none">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {files.map(file => (
-              <FileItemRow 
-                key={file.id} 
-                file={file} 
-                onDelete={onDelete} 
-                onShare={onShare} 
-              />
-            ))}
+            {files.length > 0 ? (
+              files.map(file => (
+                <FileItemRow 
+                  key={file.id} 
+                  file={file} 
+                  onDelete={onDelete} 
+                  onShare={onShare} 
+                />
+              ))
+            ) : (
+              // Show message if no files match filters/search
+              <tr>
+                <td colSpan={5} className="text-center py-6 text-gray-500">
+                  {uploading ? 'Uploading...' : 'No files match your current criteria.'}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -269,8 +310,10 @@ const FilesView: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ id: string; username: string; role: string } | null>(null);
-
-
+  // Add state for search, filter, and sort
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState('all'); // 'all', 'image', 'video', 'audio', 'document'
+  const [sortConfig, setSortConfig] = useState<{ key: keyof FileItem | null; direction: 'ascending' | 'descending' }>({ key: 'uploadDate', direction: 'descending' });
 
   // Check authentication status
   useEffect(() => {
@@ -486,6 +529,80 @@ const FilesView: React.FC = () => {
     }
   };
 
+  // Memoized calculation for filtered and sorted files
+  const filteredAndSortedFiles = useMemo(() => {
+    let sortableItems = [...files];
+
+    // Apply filtering
+    if (filterType !== 'all') {
+      sortableItems = sortableItems.filter(file => file.type === filterType);
+    }
+
+    // Apply search
+    if (searchTerm) {
+      sortableItems = sortableItems.filter(file =>
+        file.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Apply sorting
+    if (sortConfig.key !== null) {
+      sortableItems.sort((a, b) => {
+        const aValue = a[sortConfig.key!];
+        const bValue = b[sortConfig.key!];
+        let comparison = 0;
+
+        // Specific sort logic for different types
+        if (sortConfig.key === 'size') {
+          const parseSize = (sizeStr: string): number => {
+            if (!sizeStr || sizeStr === 'N/A') return 0;
+            const match = sizeStr.match(/([\d.]+)\s*MB/i);
+            return match ? parseFloat(match[1]) * 1024 * 1024 : 0; // Convert MB to bytes for accurate comparison
+          };
+          comparison = parseSize(aValue as string) - parseSize(bValue as string);
+        } else if (sortConfig.key === 'uploadDate') {
+          const parseDate = (dateStr: string): number => {
+            if (!dateStr || dateStr === 'N/A') return 0;
+            try {
+                // Attempt to parse common date formats, adjust if your format is different
+                return new Date(dateStr).getTime();
+            } catch (e) {
+                return 0; // Handle invalid date strings
+            }
+          };
+          comparison = parseDate(aValue as string) - parseDate(bValue as string);
+        } else if (sortConfig.key === 'name') {
+          // Case-insensitive string comparison for name
+          comparison = (aValue as string).toLowerCase().localeCompare((bValue as string).toLowerCase());
+        } else if (sortConfig.key === 'shared') {
+          // Boolean comparison for shared status (false comes first when ascending)
+          const boolA = aValue as boolean;
+          const boolB = bValue as boolean;
+          comparison = boolA === boolB ? 0 : (boolA ? 1 : -1);
+        } else {
+           // Default comparison for other types (if any)
+           if (aValue < bValue) {
+             comparison = -1;
+           } else if (aValue > bValue) {
+             comparison = 1;
+           }
+        }
+
+        return sortConfig.direction === 'ascending' ? comparison : comparison * -1;
+      });
+    }
+    return sortableItems;
+  }, [files, searchTerm, filterType, sortConfig]);
+
+  // Handler for sorting request from table headers (keep this)
+  const requestSort = (key: keyof FileItem) => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
@@ -502,18 +619,9 @@ const FilesView: React.FC = () => {
               Logout
             </button>
           ) : (
-            <div className="flex items-center gap-2">
-              <Link to="/login"> {/* Use react-router-dom Link */}
-                <div className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm cursor-pointer">
-                   Login
-                </div>
-              </Link>
-              <Link to="/register"> {/* Use react-router-dom Link */}
-                <div className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm cursor-pointer">
-                   Register
-                </div>
-              </Link>
-            </div>
+            <Link to="/login" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+              Login
+            </Link>
           )}
         </div>
       </div>
@@ -524,27 +632,58 @@ const FilesView: React.FC = () => {
           <span className="text-gray-700 font-medium">Filter by:</span>
           
           <div className="flex flex-wrap gap-2">
-            <button className="px-3 py-1.5 rounded-md bg-purple-100 text-purple-800 font-medium flex items-center gap-1">
+            {/* Update filter buttons */}
+            <button 
+              onClick={() => setFilterType('all')} 
+              className={`px-3 py-1.5 rounded-md font-medium flex items-center gap-1 ${
+                filterType === 'all' 
+                  ? 'bg-purple-100 text-purple-800' 
+                  : 'hover:bg-gray-100 text-gray-700'
+              }`}>
               <FileText size={16} />
               <span>All</span>
             </button>
             
-            <button className="px-3 py-1.5 rounded-md hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+            <button 
+              onClick={() => setFilterType('document')} 
+              className={`px-3 py-1.5 rounded-md font-medium flex items-center gap-1 ${
+                filterType === 'document' 
+                  ? 'bg-purple-100 text-purple-800' 
+                  : 'hover:bg-gray-100 text-gray-700'
+              }`}>
               <FileText size={16} />
               <span>Documents</span>
             </button>
             
-            <button className="px-3 py-1.5 rounded-md hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+            <button 
+              onClick={() => setFilterType('image')} 
+              className={`px-3 py-1.5 rounded-md font-medium flex items-center gap-1 ${
+                filterType === 'image' 
+                  ? 'bg-purple-100 text-purple-800' 
+                  : 'hover:bg-gray-100 text-gray-700'
+              }`}>
               <Image size={16} />
               <span>Images</span>
             </button>
             
-            <button className="px-3 py-1.5 rounded-md hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+            <button 
+              onClick={() => setFilterType('video')} 
+              className={`px-3 py-1.5 rounded-md font-medium flex items-center gap-1 ${
+                filterType === 'video' 
+                  ? 'bg-purple-100 text-purple-800' 
+                  : 'hover:bg-gray-100 text-gray-700'
+              }`}>
               <Video size={16} />
               <span>Videos</span>
             </button>
             
-            <button className="px-3 py-1.5 rounded-md hover:bg-gray-100 text-gray-700 flex items-center gap-1">
+            <button 
+              onClick={() => setFilterType('audio')} 
+              className={`px-3 py-1.5 rounded-md font-medium flex items-center gap-1 ${
+                filterType === 'audio' 
+                  ? 'bg-purple-100 text-purple-800' 
+                  : 'hover:bg-gray-100 text-gray-700'
+              }`}>
               <Music size={16} />
               <span>Audio</span>
             </button>
@@ -552,30 +691,28 @@ const FilesView: React.FC = () => {
           
           <div className="ml-auto flex items-center gap-2">
             <div className="relative">
+              {/* Update search input */}
               <input 
                 type="text" 
                 placeholder="Search files..." 
+                value={searchTerm} // Bind value
+                onChange={(e) => setSearchTerm(e.target.value)} // Add onChange
                 className="border rounded-lg py-1.5 px-3 pl-8 focus:outline-none focus:ring-2 focus:ring-purple-500 w-64"
               />
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 absolute left-2.5 top-2.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
-            
-            <select className="border rounded-lg py-1.5 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white">
-              <option>Sort by: Newest</option>
-              <option>Sort by: Oldest</option>
-              <option>Sort by: Name (A-Z)</option>
-              <option>Sort by: Name (Z-A)</option>
-              <option>Sort by: Size (Large-Small)</option>
-              <option>Sort by: Size (Small-Large)</option>
-            </select>
           </div>
         </div>
       </div>
       
       {/* File List */}
       <div className="bg-white rounded-lg shadow p-6">
+        <div className="mb-6">
+           <DragDropUpload onUpload={handleFileUpload} />
+        </div>
+
         {isLoading && (
           <div className="text-center py-6">
             <p className="text-gray-500">Loading files...</p>
@@ -605,11 +742,13 @@ const FilesView: React.FC = () => {
         
         {!isLoading && !error && (
           <FileListTable 
-            files={files} 
+            files={filteredAndSortedFiles} 
             onDelete={handleDelete} 
             onShare={handleShare}
             uploading={uploading}
             onUpload={handleFileUpload}
+            sortConfig={sortConfig}
+            requestSort={requestSort}
           />
         )}
       </div>

@@ -1,9 +1,8 @@
-// Load environment variables from server directory
-const path = require('path');
-require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+// Load environment variables
+require('dotenv').config();
 
 
-const { scheduleDailyPageViewReset } = require('./cron/cronJobs.js');
+const { scheduleDailyPageViewReset } = require('./cronJobs.js'); 
 scheduleDailyPageViewReset();
 
 
@@ -11,7 +10,7 @@ scheduleDailyPageViewReset();
 // Import necessary modules
 const express = require('express');
 const cors = require('cors');
-const connectDB = require('./db/connect'); // Path is now correct
+const connectDB = require('./db/connect'); // Import DB connection function
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
 

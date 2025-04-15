@@ -1,12 +1,13 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, LayoutDashboard, Users, Settings, File } from 'lucide-react';
+import { Home, LayoutDashboard, Users, Settings, File, FolderKanban } from 'lucide-react';
 
 const SideNav: React.FC = () => {
   const location = useLocation();
 
   const navItems = [
-    { name: 'Files', icon: <Home size={20} />, href: '/' },
+    { name: 'Personal File', icon: <Home size={20} />, href: '/' },
+    { name: 'Group Files', icon: <FolderKanban size={20} />, href: '/groups' },
     { name: 'Dashboard', icon: <LayoutDashboard size={20} />, href: '/dashboard' },
     { name: 'Users', icon: <Users size={20} />, href: '/users' },
     { name: 'Settings', icon: <Settings size={20} />, href: '/settings' },
