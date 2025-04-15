@@ -112,12 +112,18 @@ const SideNav: React.FC<SideNavProps> = ({ currentUser, isLoading }) => {
              </button>
           </div>
         ) : (
-          <div className="text-center">
+          <div className="flex items-center justify-center gap-2">
             <Link
               to="/login"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm w-full block"
+              className="px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
             >
               Login
+            </Link>
+            <Link
+              to="/register"
+              className="px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
+            >
+              Register
             </Link>
           </div>
         )}

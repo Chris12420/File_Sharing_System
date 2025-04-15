@@ -295,13 +295,18 @@ const downloadFile = async (req, res) => {
 
 const getAllFiles = async (req, res) => {
   try {
-    const files = await File.find()
-      .populate('uploadedBy', 'username')
+    const userId = req.user.id; // Get the logged-in user's ID
+
+    // Find files owned by the current user and NOT belonging to any group
+    const files = await File.find({ ownerId: userId, groupId: null })
+      .populate('uploadedBy', 'username') // uploadedBy might be redundant if ownerId is always populated
+      .populate('ownerId', 'username') // Populate owner username
       .sort({ createdAt: -1 });
+
     res.status(200).json(files);
   } catch (error) {
-    console.error('Error in getAllFiles:', error);
-    res.status(500).json({ message: 'Error fetching files' });
+    console.error('Error in getAllFiles (personal files):', error);
+    res.status(500).json({ message: 'Error fetching personal files' });
   }
 };
 
