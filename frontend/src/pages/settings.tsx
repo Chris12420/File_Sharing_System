@@ -282,27 +282,27 @@ const SettingsPage: React.FC = () => {
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               required
             />
-          </div>
-
-          <div>
+              </div>
+              
+                <div>
             <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700">
               New Password
-            </label>
-            <input
+                  </label>
+                  <input 
               type="password"
               id="newPassword"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               required
-            />
-          </div>
+                  />
+                </div>
 
-          <div>
+                <div>
             <label htmlFor="confirmNewPassword" className="block text-sm font-medium text-gray-700">
               Confirm New Password
-            </label>
-            <input
+                  </label>
+                  <input 
               type="password"
               id="confirmNewPassword"
               value={confirmNewPassword}
@@ -311,7 +311,7 @@ const SettingsPage: React.FC = () => {
               required
             />
           </div>
-
+          
           <div className="pt-2">
             <button
               type="submit"

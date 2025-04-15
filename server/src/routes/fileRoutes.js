@@ -3,7 +3,10 @@ const router = express.Router();
 const fileController = require('../controllers/fileController');
 const { isAuthenticated } = require('../middleware/authMiddleware');
 
-// All file routes require authentication
+// Public download route (NO authentication)
+router.get('/public/:id', fileController.downloadPublicFile);
+
+// All other file routes require authentication
 router.use(isAuthenticated);
 
 // Upload a file
@@ -17,5 +20,8 @@ router.get('/download/:id', fileController.downloadFile);
 
 // Delete a file by ID
 router.delete('/:id', fileController.deleteFile);
+
+// Toggle public sharing status
+router.put('/:id/share', fileController.toggleSharing);
 
 module.exports = router; 

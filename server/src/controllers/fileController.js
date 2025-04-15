@@ -7,6 +7,7 @@ const config = require('../config/db'); // Assuming config loads .env
 const stream = require('stream'); // Import stream module
 const { UserInteraction } = require('../models/DataAnalytics'); 
 const Group = require('../models/Group'); // Import Group model for membership check
+const asyncHandler = require('express-async-handler');
 
 
 
@@ -400,9 +401,125 @@ const deleteFile = async (req, res) => {
   }
 };
 
+// @desc    Toggle the public sharing status of a file
+// @route   PUT /api/files/:id/share
+// @access  Private (Owner only)
+const toggleSharing = asyncHandler(async (req, res) => {
+  const fileId = req.params.id;
+  const userId = req.user.id;
+
+  if (!mongoose.Types.ObjectId.isValid(fileId)) {
+    res.status(400);
+    throw new Error('Invalid file ID format');
+  }
+
+  const file = await File.findById(fileId);
+
+  if (!file) {
+    res.status(404);
+    throw new Error('File not found');
+  }
+
+  // Authorization: Only the owner can toggle sharing
+  if (file.ownerId.toString() !== userId) {
+    res.status(403);
+    throw new Error('You do not have permission to change sharing status for this file');
+  }
+
+  // Toggle the isPublic status
+  file.isPublic = !file.isPublic;
+  await file.save();
+
+  console.log(`Sharing status for file ${fileId} toggled to: ${file.isPublic}`);
+  
+  // Return the updated file metadata (or just the status)
+  res.status(200).json({
+      id: file._id,
+      isPublic: file.isPublic,
+      // include other fields if needed by frontend
+  });
+});
+
+// @desc    Download a publicly shared file
+// @route   GET /api/files/public/:id 
+// @access  Public (if file.isPublic is true)
+const downloadPublicFile = asyncHandler(async (req, res) => {
+  try {
+    const fileMetadata = await File.findById(req.params.id);
+    if (!fileMetadata || !fileMetadata.isPublic) { // Check if found AND isPublic
+      return res.status(404).json({ message: 'File not found or not shared publicly' });
+    }
+
+    if (!fileMetadata.gridfsId) {
+      return res.status(404).json({ message: 'File data reference not found' });
+    }
+
+    // Check if gfsBucket is initialized
+    if (!gfsBucket) {
+      console.error("GridFSBucket not initialized (public download).");
+      return res.status(500).json({ message: 'Storage service not available' });
+    }
+
+    let gridfsId;
+    try {
+      gridfsId = new mongoose.Types.ObjectId(fileMetadata.gridfsId);
+    } catch (castError) {
+      return res.status(500).json({ message: 'Internal file reference error' });
+    }
+
+    const downloadStream = gfsBucket.openDownloadStream(gridfsId);
+
+    downloadStream.on('error', (error) => {
+      if (error.code === 'ENOENT') {
+        if (!res.headersSent) {
+          return res.status(404).json({ message: 'File not found in storage' });
+        }
+      } else {
+        console.error('Error streaming public file from GridFS:', error);
+        if (!res.headersSent) {
+          res.status(500).json({ message: 'Error downloading file' });
+        }
+      }
+      if (!res.finished) {
+        res.end();
+      }
+    });
+
+    downloadStream.on('file', (fileDoc) => {
+      console.log(`Starting public download for: ${fileDoc.filename} (Original: ${fileMetadata.originalName})`);
+      res.set({
+        'Content-Type': fileDoc.contentType || fileMetadata.mimeType,
+        'Content-Length': fileDoc.length,
+        'Content-Disposition': `attachment; filename="${encodeURIComponent(fileMetadata.originalName)}"`,
+      });
+    });
+
+    downloadStream.pipe(res).on('finish', () => {
+      console.log(`Public file ${fileMetadata.originalName} downloaded successfully.`);
+      // No interaction update for public downloads
+    }).on('error', (pipeError) => {
+      console.error('Error piping public download stream:', pipeError);
+      if (!res.finished) {
+        res.end();
+      }
+    });
+
+  } catch (error) {
+    console.error('Error in downloadPublicFile controller:', error);
+    if (error instanceof mongoose.Error.CastError) {
+        return res.status(400).json({ message: 'Invalid file ID format' });
+    }
+    if (!res.headersSent) {
+      res.status(500).json({ message: 'Error processing public download request' });
+    }
+  }
+});
+
 module.exports = {
   uploadFile,
   downloadFile,
   getAllFiles,
-  deleteFile
+  deleteFile,
+  toggleSharing,
+  downloadPublicFile,
 }; 

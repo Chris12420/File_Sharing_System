@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Trash2, Download, Share2, Upload, File, FileText, Music, Video, Image } from 'lucide-react';
 import { Link } from 'react-router-dom'; // Import Link from react-router-dom
+import axios from 'axios';
 
 // --- Reusable Components (Potentially move to src/components later) ---
 
 interface FileItem {
-  id: number;
+  id: string; // Use string for MongoDB _id
   name: string;
   size: string;
   type: string;
   uploadDate: string;
-  shared: boolean;
+  isPublic: boolean; // Renamed from shared for clarity
 }
 
 interface DragDropUploadProps {
@@ -81,16 +82,14 @@ const FileIcon: React.FC<{ fileType: string }> = ({ fileType }) => {
 
 interface FileItemProps {
   file: FileItem;
-  onDelete: (id: number) => void;
+  onDelete: (id: string) => void;
   onShare: (file: FileItem) => void;
 }
 
 const FileItemRow: React.FC<FileItemProps> = ({ file, onDelete, onShare }) => {
-  // Function to handle download click
-  const handleDownload = (fileId: number) => {
-    // Construct the download URL using environment variable
+  const handleDownload = (fileId: string) => {
+    // Keep using the authenticated download endpoint for the owner
     const downloadUrl = `${import.meta.env.VITE_API_BASE_URL}/api/files/download/${fileId}`;
-    // Open the URL in a new tab (or same tab) to trigger download
     window.open(downloadUrl, '_blank');
   };
 
@@ -105,9 +104,9 @@ const FileItemRow: React.FC<FileItemProps> = ({ file, onDelete, onShare }) => {
       <td className="py-3 px-4 text-gray-500">{file.size}</td>
       <td className="py-3 px-4 text-gray-500">{file.uploadDate}</td>
       <td className="py-3 px-4">
-        {file.shared ? (
+        {file.isPublic ? (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-            Shared
+            Public
           </span>
         ) : (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
@@ -146,7 +145,7 @@ const FileItemRow: React.FC<FileItemProps> = ({ file, onDelete, onShare }) => {
 
 interface FileListProps {
   files: FileItem[];
-  onDelete: (id: number) => void;
+  onDelete: (id: string) => void;
   onShare: (file: FileItem) => void;
   uploading: boolean;
   onUpload: (files: FileList) => void;
@@ -205,8 +204,8 @@ const FileListTable: React.FC<FileListProps> = ({
                 Uploaded{getSortIndicator('uploadDate')}
               </th>
               {/* Make Status header clickable and add indicator */}
-              <th className="text-left py-3 px-4 cursor-pointer hover:bg-gray-100 select-none" onClick={() => requestSort('shared')}>
-                Status{getSortIndicator('shared')}
+              <th className="text-left py-3 px-4 cursor-pointer hover:bg-gray-100 select-none" onClick={() => requestSort('isPublic')}>
+                Status{getSortIndicator('isPublic')}
               </th>
               <th className="text-right py-3 px-4 select-none">Actions</th>
             </tr>
@@ -239,59 +238,72 @@ const FileListTable: React.FC<FileListProps> = ({
 interface ShareModalProps {
   file: FileItem | null;
   onClose: () => void;
-  onToggleShare: (id: number) => void;
+  onToggleShare: (id: string) => Promise<void>; // Make async, returns void
+  isToggling: boolean;
+  toggleError: string | null;
 }
 
-const ShareModal: React.FC<ShareModalProps> = ({ file, onClose, onToggleShare }) => {
+const ShareModal: React.FC<ShareModalProps> = ({ file, onClose, onToggleShare, isToggling, toggleError }) => {
   const [copySuccess, setCopySuccess] = useState(false);
-  
+  const publicLink = file ? `${import.meta.env.VITE_API_BASE_URL}/api/files/public/${file.id}` : '';
+
   const handleCopy = () => {
-    // In a real app, this would copy to clipboard
-    setCopySuccess(true);
-    
-    // Reset copy success message after 2 seconds
-    setTimeout(() => {
-      setCopySuccess(false);
-    }, 2000);
+    if (!publicLink) return;
+    navigator.clipboard.writeText(publicLink).then(() => {
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    }).catch(err => {
+      console.error('Failed to copy link:', err);
+      // Optionally show a copy error message
+    });
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
         <h3 className="text-lg font-medium mb-4">Share File</h3>
-        <p className="mb-2 text-gray-600">{file?.name}</p>
+        <p className="mb-2 text-gray-600 truncate">{file?.name}</p>
         
-        <div className="flex items-center mt-4 mb-6">
-          <input
-            type="text"
-            readOnly
-            value={`https://fileshare.example/share/${file?.id}`}
-            className="flex-1 border rounded-l-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <button
-            onClick={handleCopy}
-            className="bg-blue-600 text-white py-2 px-4 rounded-r-lg hover:bg-blue-700"
-          >
-            Copy
-          </button>
-        </div>
-        
-        {copySuccess && (
-          <p className="text-green-600 mb-4">Link copied to clipboard!</p>
+        {/* Only show link input if sharing is enabled (isPublic) */}
+        {file?.isPublic && (
+           <div className="flex items-center mt-4 mb-6">
+              <input
+                 type="text"
+                 readOnly
+                 value={publicLink}
+                 className="flex-1 border rounded-l-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
+              />
+              <button
+                 onClick={handleCopy}
+                 className="bg-blue-600 text-white py-2 px-4 rounded-r-lg hover:bg-blue-700"
+              >
+                 {copySuccess ? 'Copied!' : 'Copy'}
+              </button>
+           </div>
+        )}
+        {!file?.isPublic && (
+           <p className="text-sm text-gray-500 my-4">Enable sharing to get a public download link.</p>
         )}
         
+        {/* Display toggle error */}
+        {toggleError && (
+           <p className="text-red-500 text-sm mb-3">Error: {toggleError}</p>
+        )}
+
         <div className="flex justify-end gap-2">
           <button
             onClick={onClose}
-            className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300"
+            disabled={isToggling}
+            className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 disabled:opacity-50"
           >
             Close
           </button>
           <button
             onClick={() => file && onToggleShare(file.id)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+            disabled={isToggling}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {file?.shared ? 'Disable Sharing' : 'Enable Sharing'}
+            {isToggling ? 'Updating...' : (file?.isPublic ? 'Disable Sharing' : 'Enable Sharing')}
           </button>
         </div>
       </div>
@@ -314,6 +326,8 @@ const FilesView: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all'); // 'all', 'image', 'video', 'audio', 'document'
   const [sortConfig, setSortConfig] = useState<{ key: keyof FileItem | null; direction: 'ascending' | 'descending' }>({ key: 'uploadDate', direction: 'descending' });
+  const [isTogglingShare, setIsTogglingShare] = useState(false);
+  const [shareToggleError, setShareToggleError] = useState<string | null>(null);
 
   // Check authentication status
   useEffect(() => {
@@ -384,14 +398,12 @@ const FilesView: React.FC = () => {
 
         // Map fetched data to FileItem structure
         const mappedFiles: FileItem[] = fetchedData.map((file: any) => ({
-          id: file._id, // Use _id from MongoDB
-          name: file.originalName || file.name, // Prefer originalName, fallback to name
-          size: file.size ? `${(file.size / (1024 * 1024)).toFixed(2)} MB` : 'N/A', // Format size, handle missing size
-          // Determine type based on mimeType or type field
+          id: file._id, 
+          name: file.originalName || file.name, 
+          size: file.size ? `${(file.size / (1024 * 1024)).toFixed(2)} MB` : 'N/A',
           type: file.mimeType ? file.mimeType.split('/')[0] : (file.type ? file.type.split('/')[0] : 'document'),
-          // Use createdAt for newer files, uploadDate for older mock data
           uploadDate: file.createdAt ? new Date(file.createdAt).toLocaleDateString() : (file.uploadDate ? new Date(file.uploadDate).toLocaleDateString() : 'N/A'),
-          shared: file.shared || false // Handle shared status
+          isPublic: file.isPublic || false // Map isPublic field
         }));
 
         setFiles(mappedFiles); // Set the mapped data
@@ -447,7 +459,7 @@ const FilesView: React.FC = () => {
         size: `${(newFileData.size / (1024 * 1024)).toFixed(2)} MB`, // Use newFileData.size
         type: newFileData.mimeType ? newFileData.mimeType.split('/')[0] : 'document',
         uploadDate: new Date(newFileData.createdAt).toLocaleDateString(), // Use newFileData.createdAt
-        shared: newFileData.shared || false // Use newFileData.shared (might still be undefined if not sent)
+        isPublic: newFileData.isPublic || false // Use newFileData.isPublic (might still be undefined if not sent)
       }, ...prevFiles]);
     } catch (err: any) {
       console.error('Upload error:', err);
@@ -457,7 +469,7 @@ const FilesView: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     // 显示确认提示
     const confirmDelete = window.confirm('Confirm delete this file');
     if (!confirmDelete) {
@@ -488,16 +500,35 @@ const FilesView: React.FC = () => {
 
   const handleShare = (file: FileItem) => {
     setCurrentFileToShare(file);
+    setShareToggleError(null); // Clear previous errors
     setShareModalOpen(true);
   };
 
-  const toggleShareStatus = async (id: number) => {
-    console.log(`Toggling share status for ${id} (API call needed)`);
-    const originalFiles = files;
-    setFiles(files.map(f => 
-      f.id === id ? {...f, shared: !f.shared} : f
-    ));
-    setShareModalOpen(false);
+  const toggleShareStatus = async (id: string) => {
+    setIsTogglingShare(true);
+    setShareToggleError(null);
+    try {
+      const response = await axios.put(
+        `${import.meta.env.VITE_API_BASE_URL}/api/files/${id}/share`,
+        {}, // No body needed
+        { withCredentials: true }
+      );
+      // Update the file status in the local state
+      setFiles(prevFiles =>
+        prevFiles.map(f =>
+          f.id === id ? { ...f, isPublic: response.data.isPublic } : f
+        )
+      );
+      // Also update the file object in the modal if it's still open
+      setCurrentFileToShare(prev => prev && prev.id === id ? { ...prev, isPublic: response.data.isPublic } : prev);
+      // Don't close modal automatically, let user copy link if needed
+      // setShareModalOpen(false); 
+    } catch (err: any) {
+      console.error('Error toggling share status:', err);
+      setShareToggleError(err.response?.data?.message || 'Failed to update status.');
+    } finally {
+      setIsTogglingShare(false);
+    }
   };
 
   // Logout function
@@ -574,7 +605,7 @@ const FilesView: React.FC = () => {
         } else if (sortConfig.key === 'name') {
           // Case-insensitive string comparison for name
           comparison = (aValue as string).toLowerCase().localeCompare((bValue as string).toLowerCase());
-        } else if (sortConfig.key === 'shared') {
+        } else if (sortConfig.key === 'isPublic') { // Update key name if changed
           // Boolean comparison for shared status (false comes first when ascending)
           const boolA = aValue as boolean;
           const boolB = bValue as boolean;
@@ -738,41 +769,13 @@ const FilesView: React.FC = () => {
 
       {/* Share Modal */}
       {shareModalOpen && currentFileToShare && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
-            <h3 className="text-lg font-medium mb-4">Share File</h3>
-            <p className="mb-2 text-gray-600">{currentFileToShare.name}</p>
-            
-            <div className="flex items-center mt-4 mb-6">
-              <input
-                type="text"
-                readOnly
-                value={`https://fileshare.example/share/${currentFileToShare.id}`}
-                className="flex-1 border rounded-l-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <button
-                className="bg-blue-600 text-white py-2 px-4 rounded-r-lg hover:bg-blue-700"
-              >
-                Copy
-              </button>
-            </div>
-            
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setShareModalOpen(false)}
-                className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300"
-              >
-                Close
-              </button>
-              <button
-                onClick={() => toggleShareStatus(currentFileToShare.id)}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-              >
-                {currentFileToShare.shared ? 'Disable Sharing' : 'Enable Sharing'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ShareModal 
+          file={currentFileToShare} 
+          onClose={() => setShareModalOpen(false)} 
+          onToggleShare={toggleShareStatus} 
+          isToggling={isTogglingShare}
+          toggleError={shareToggleError}
+        />
       )}
     </div>
   );
