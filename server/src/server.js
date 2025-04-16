@@ -30,18 +30,11 @@ if (process.env.NODE_ENV === 'production') {
 // --- CORS Configuration ---
 // Define allowed origins
 const allowedOrigins = [
-  'https://file-sharing-system-phi.vercel.app',
-  'https://file-sharing-system-phi.vercel.app/login',
-  'https://file-sharing-system-phi.vercel.app/register',
-  'https://file-sharing-system-phi.vercel.app/dashboard',
-  'https://file-sharing-system-phi.vercel.app/files',
-  'https://file-sharing-system-phi.vercel.app/settings',
-  'https://file-sharing-system-phi.vercel.app/users',
-  'https://file-sharing-system-phi.vercel.app/groups',
-  'https://file-sharing-system-git-main-chris-projects-afd41ab0.vercel.app',
-  'https://file-sharing-system-lj26933kt-chris-projects-afd41ab0.vercel.app',
-  'https://chris12420.github.io/File_Sharing_System/',
-  'http://localhost:3000' // Keep for local development
+  'https://file-sharing-system-phi.vercel.app', // Vercel main domain
+  'https://file-sharing-system-git-main-chris-projects-afd41ab0.vercel.app', // Vercel preview domain 1
+  'https://file-sharing-system-lj26933kt-chris-projects-afd41ab0.vercel.app', // Vercel preview domain 2
+  'https://chris12420.github.io', // GitHub Pages domain
+  'http://localhost:3000' // Local development
 ];
 
 const corsOptions = {
