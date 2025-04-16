@@ -30,9 +30,17 @@ if (process.env.NODE_ENV === 'production') {
 // --- CORS Configuration ---
 // Define allowed origins
 const allowedOrigins = [
-  'https://file-sharing-system-phi.vercel.app', // <-- **必須替換**為您 Vercel 前端的實際 URL
-  // Add other allowed origins if needed (e.g., preview URLs, localhost for dev)
-  'http://localhost:3000' // Vite default dev port (adjust if different)
+  'https://file-sharing-system-phi.vercel.app',
+  'https://file-sharing-system-phi.vercel.app/login',
+  'https://file-sharing-system-phi.vercel.app/register',
+  'https://file-sharing-system-phi.vercel.app/dashboard',
+  'https://file-sharing-system-phi.vercel.app/files',
+  'https://file-sharing-system-phi.vercel.app/settings',
+  'https://file-sharing-system-phi.vercel.app/users',
+  'https://file-sharing-system-phi.vercel.app/groups',
+  'https://file-sharing-system-git-main-chris-projects-afd41ab0.vercel.app',
+  'https://file-sharing-system-lj26933kt-chris-projects-afd41ab0.vercel.app',
+  'http://localhost:3000' // Keep for local development
 ];
 
 const corsOptions = {
