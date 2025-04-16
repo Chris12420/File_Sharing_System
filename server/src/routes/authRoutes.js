@@ -83,6 +83,18 @@ router.get('/check', (req, res) => {
   }
 });
 
+// --- Simple GET routes for testing ---
+router.get('/', (req, res) => {
+  console.log("Received GET request on /api/auth"); // Add log for checking Render logs
+  res.json({ message: 'Auth route root is working!' });
+});
+
+router.get('/ping', (req, res) => {
+  console.log("Received GET request on /api/auth/ping"); // Add log
+  res.json({ message: 'Pong! Auth test route is working.' });
+});
+// --- End of test routes ---
+
 // Logout route
 router.post('/logout', (req, res) => {
   req.session.destroy((err) => {
