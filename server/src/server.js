@@ -40,6 +40,7 @@ const allowedOrigins = [
   'https://file-sharing-system-phi.vercel.app/groups',
   'https://file-sharing-system-git-main-chris-projects-afd41ab0.vercel.app',
   'https://file-sharing-system-lj26933kt-chris-projects-afd41ab0.vercel.app',
+  'https://chris12420.github.io/File_Sharing_System/',
   'http://localhost:3000' // Keep for local development
 ];
 
