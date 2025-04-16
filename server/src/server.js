@@ -72,12 +72,11 @@ app.use(session({
     collectionName: 'sessions' // Optional: specify session collection name
   }),
   cookie: {
-    secure: process.env.NODE_ENV === 'production', // Use secure cookies in production (needs HTTPS)
+    secure: true, // Always use secure cookies (needs HTTPS)
     httpOnly: true, // Prevent client-side JS from accessing the cookie
     maxAge: 1000 * 60 * 60 * 24, // Cookie expiration time (e.g., 1 day)
-    // Use 'none' for cross-site cookies (Vercel <-> Render) in production
-    // Use 'lax' for local development or same-site scenarios
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+    // Always use 'none' for cross-site cookies
+    sameSite: 'none'
   }
 }));
 
