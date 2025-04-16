@@ -1,14 +1,11 @@
-// frontend/vite.config.ts
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
+// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 3000,
-    open: true,
+    port: 3000, // You can specify the port for the dev server
+    open: true, // Automatically open the app in the browser
   },
-  build: { // 添加 build 配置
-    outDir: 'build' // 將輸出目錄設置為 'build'
-  }
-});
+}); 
