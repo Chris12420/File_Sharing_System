@@ -78,7 +78,7 @@ app.use(session({
   }
 }));
 
-// Define a simple root route
+// Define a simple root route.
 app.get('/', (req, res) => {
   res.json({ message: 'Welcome to the File Sharing System API!' });
 });
