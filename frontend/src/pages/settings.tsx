@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+// Remove direct axios import if no longer needed
+// import axios from 'axios'; 
+import apiClient from '../apiClient'; // Import the centralized client
 import { User } from '../components/Layout'; // Import User interface if needed
 
 const SettingsPage: React.FC = () => {
@@ -38,16 +40,16 @@ const SettingsPage: React.FC = () => {
     const fetchCurrentUser = async () => {
       setIsLoadingUser(true);
       try {
-        const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/auth/check`, {
-          withCredentials: true,
-        });
+        // Use apiClient
+        const response = await apiClient.get('/api/auth/check');
+        
         if (isMounted && response.data.authenticated) {
           const userData = response.data.user;
           // Fetch full user details to get email if not in session
           // Assuming /api/users/me or similar endpoint exists, or fetch by ID
           // For simplicity, let's assume /check returns email OR we fetch separately
           // If email is not returned by /check, you need another API call here
-          // Example: const profileRes = await axios.get(/api/users/ + userData.id)
+          // Example: const profileRes = await apiClient.get('/api/users/' + userData.id)
           // const fullUserData = profileRes.data;
           // setUsername(fullUserData.username || '');
           // setEmail(fullUserData.email || '');
@@ -61,7 +63,8 @@ const SettingsPage: React.FC = () => {
           // If email wasn't in session, fetch it (Placeholder - requires backend endpoint)
           if (!userData.email) {
               console.log("Email not in session, fetching profile...");
-              // const profileRes = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/users/${userData.id}`, { withCredentials: true });
+              // Use apiClient for potential future fetch
+              // const profileRes = await apiClient.get('/api/users/' + userData.id);
               // if (isMounted && profileRes.data) {
               //    setEmail(profileRes.data.email || '');
               // }
@@ -90,10 +93,10 @@ const SettingsPage: React.FC = () => {
     setEmailSuccess(null);
 
     try {
-      await axios.put(
-        `${import.meta.env.VITE_API_BASE_URL}/api/settings/profile`,
-        { username }, // Only send username
-        { withCredentials: true }
+      // Use apiClient
+      await apiClient.put(
+        '/api/settings/profile',
+        { username } // Only send username
       );
       setUsernameSuccess('Username updated successfully!');
       window.location.reload(); // Reload to update SideNav
@@ -115,10 +118,10 @@ const SettingsPage: React.FC = () => {
     setUsernameSuccess(null);
 
     try {
-      await axios.put(
-        `${import.meta.env.VITE_API_BASE_URL}/api/settings/profile`,
-        { email }, // Only send email
-        { withCredentials: true }
+      // Use apiClient
+      await apiClient.put(
+        '/api/settings/profile',
+        { email } // Only send email
       );
       setEmailSuccess('Email updated successfully!');
       // No reload needed for email
@@ -138,10 +141,10 @@ const SettingsPage: React.FC = () => {
     setProfileSuccess(null);
 
     try {
-      const response = await axios.put(
-        `${import.meta.env.VITE_API_BASE_URL}/api/settings/profile`,
-        { username, email }, // Send updated username and email
-        { withCredentials: true }
+      // Use apiClient
+      const response = await apiClient.put(
+        '/api/settings/profile',
+        { username, email } // Send updated username and email
       );
       setProfileSuccess('Profile updated successfully!');
       // Refresh the page to reflect changes (e.g., username in SideNav)
@@ -171,10 +174,10 @@ const SettingsPage: React.FC = () => {
     setPasswordSuccess(null);
 
     try {
-      await axios.put(
-        `${import.meta.env.VITE_API_BASE_URL}/api/settings/password`,
-        { currentPassword, newPassword },
-        { withCredentials: true }
+      // Use apiClient
+      await apiClient.put(
+        '/api/settings/password',
+        { currentPassword, newPassword }
       );
       setPasswordSuccess('Password updated successfully!');
       // Clear password fields on success

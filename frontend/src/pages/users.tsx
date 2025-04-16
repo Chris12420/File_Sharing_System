@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Modal from '../components/Modal';
 import UserForm from '../components/UserForm';
 import EditUserForm from '../components/EditUserForm';
+import apiClient from '../apiClient'; // Import apiClient
 
 const UsersView: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -19,18 +20,14 @@ const UsersView: React.FC = () => {
   const fetchUsers = async () => {
     setIsLoadingUsers(true);
     try {
-      // Use environment variable for API base URL
-      const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/api/users`;
-      const response = await fetch(apiUrl);
-      if (!response.ok) {
-        throw new Error('Failed to fetch users');
-      }
-      const data = await response.json();
-      console.log('Fetched users:', data);
-      setUsers(data);
-    } catch (error) {
+      // Replace fetch with apiClient
+      // Remove baseUrl and apiUrl definitions
+      const response = await apiClient.get('/api/users');
+      console.log('Fetched users:', response.data); // Access data via response.data
+      setUsers(response.data);
+    } catch (error: any) { // Axios errors have response property
       console.error('Error fetching users:', error);
-      setApiError('Failed to load users');
+      setApiError(error.response?.data?.message || error.message || 'Failed to load users');
     } finally {
       setIsLoadingUsers(false);
     }
@@ -85,20 +82,9 @@ const UsersView: React.FC = () => {
     setApiError(null);
     
     try {
-      // Use environment variable for API base URL
-      const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/api/users/${userToDelete._id}`;
-      const response = await fetch(apiUrl, {
-        method: 'DELETE',
-      });
-      
-      if (!response.ok) {
-        let errorMsg = `HTTP error! status: ${response.status}`;
-        try {
-          const errorData = await response.json();
-          errorMsg = errorData.message || errorMsg;
-        } catch (e) { /* Ignore if response is not JSON */ }
-        throw new Error(errorMsg);
-      }
+      // Replace fetch with apiClient
+      // Remove baseUrl and apiUrl definitions
+      await apiClient.delete(`/api/users/${userToDelete._id}`);
       
       // Refresh user list
       fetchUsers();
@@ -106,7 +92,7 @@ const UsersView: React.FC = () => {
       
     } catch (error: any) {
       console.error('Failed to delete user:', error);
-      setApiError(error.message || 'An unexpected error occurred.');
+      setApiError(error.response?.data?.message || error.message || 'An unexpected error occurred.');
     } finally {
       setLoading(false);
     }
@@ -118,41 +104,11 @@ const UsersView: React.FC = () => {
     console.log('Submitting user data:', formData);
 
     try {
-      // Use environment variable for API base URL
-      const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/api/users`;
+      // Replace fetch with apiClient
+      // Remove baseUrl and apiUrl definitions
+      const response = await apiClient.post('/api/users', formData);
 
-      // Log the request details for debugging
-      console.log('Sending request to:', apiUrl);
-      console.log('Request method:', 'POST');
-      console.log('Request headers:', { 'Content-Type': 'application/json' });
-      console.log('Request body:', JSON.stringify(formData, null, 2));
-
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      // Log the response for debugging
-      console.log('Response status:', response.status);
-      console.log('Response status text:', response.statusText);
-
-      if (!response.ok) {
-        let errorMsg = `HTTP error! status: ${response.status}`;
-        try {
-          const errorData = await response.json();
-          console.log('Error response data:', errorData); // Log error details
-          errorMsg = errorData.message || errorMsg;
-        } catch (e) { 
-          console.log('Error parsing response:', e);
-          /* Ignore if response is not JSON */ 
-        }
-        throw new Error(errorMsg);
-      }
-
-      const newUser = await response.json();
+      const newUser = response.data; // Access data via response.data
       console.log('User created successfully:', newUser);
       
       // Refresh the user list from the server to get the latest data
@@ -162,7 +118,7 @@ const UsersView: React.FC = () => {
 
     } catch (error: any) {
       console.error('Failed to create user:', error);
-      setApiError(error.message || 'An unexpected error occurred.');
+      setApiError(error.response?.data?.message || error.message || 'An unexpected error occurred.');
     } finally {
       setLoading(false);
     }
@@ -175,24 +131,9 @@ const UsersView: React.FC = () => {
     setApiError(null);
     
     try {
-      // Use environment variable for API base URL
-      const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/api/users/${userToEdit._id}`;
-      const response = await fetch(apiUrl, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-      
-      if (!response.ok) {
-        let errorMsg = `HTTP error! status: ${response.status}`;
-        try {
-          const errorData = await response.json();
-          errorMsg = errorData.message || errorMsg;
-        } catch (e) { /* Ignore if response is not JSON */ }
-        throw new Error(errorMsg);
-      }
+      // Replace fetch with apiClient
+      // Remove baseUrl and apiUrl definitions
+      await apiClient.put(`/api/users/${userToEdit._id}`, formData);
       
       // Refresh user list
       fetchUsers();
@@ -200,7 +141,7 @@ const UsersView: React.FC = () => {
       
     } catch (error: any) {
       console.error('Failed to update user:', error);
-      setApiError(error.message || 'An unexpected error occurred.');
+      setApiError(error.response?.data?.message || error.message || 'An unexpected error occurred.');
     } finally {
       setLoading(false);
     }

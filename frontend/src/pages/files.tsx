@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Trash2, Download, Share2, Upload, File, FileText, Music, Video, Image } from 'lucide-react';
 import { Link } from 'react-router-dom'; // Import Link from react-router-dom
-import axios from 'axios';
+import apiClient from '../apiClient'; // Import apiClient
 
 // --- Reusable Components (Potentially move to src/components later) ---
 
@@ -213,12 +213,12 @@ const FileListTable: React.FC<FileListProps> = ({
           <tbody className="divide-y divide-gray-100">
             {files.length > 0 ? (
               files.map(file => (
-                <FileItemRow 
-                  key={file.id} 
-                  file={file} 
-                  onDelete={onDelete} 
-                  onShare={onShare} 
-                />
+              <FileItemRow 
+                key={file.id} 
+                file={file} 
+                onDelete={onDelete} 
+                onShare={onShare} 
+              />
               ))
             ) : (
               // Show message if no files match filters/search
@@ -246,11 +246,11 @@ interface ShareModalProps {
 const ShareModal: React.FC<ShareModalProps> = ({ file, onClose, onToggleShare, isToggling, toggleError }) => {
   const [copySuccess, setCopySuccess] = useState(false);
   const publicLink = file ? `${import.meta.env.VITE_API_BASE_URL}/api/files/public/${file.id}` : '';
-
+  
   const handleCopy = () => {
     if (!publicLink) return;
     navigator.clipboard.writeText(publicLink).then(() => {
-      setCopySuccess(true);
+    setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 2000);
     }).catch(err => {
       console.error('Failed to copy link:', err);
@@ -266,20 +266,20 @@ const ShareModal: React.FC<ShareModalProps> = ({ file, onClose, onToggleShare, i
         
         {/* Only show link input if sharing is enabled (isPublic) */}
         {file?.isPublic && (
-           <div className="flex items-center mt-4 mb-6">
-              <input
-                 type="text"
-                 readOnly
+        <div className="flex items-center mt-4 mb-6">
+          <input
+            type="text"
+            readOnly
                  value={publicLink}
                  className="flex-1 border rounded-l-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
-              />
-              <button
-                 onClick={handleCopy}
-                 className="bg-blue-600 text-white py-2 px-4 rounded-r-lg hover:bg-blue-700"
-              >
+          />
+          <button
+            onClick={handleCopy}
+            className="bg-blue-600 text-white py-2 px-4 rounded-r-lg hover:bg-blue-700"
+          >
                  {copySuccess ? 'Copied!' : 'Copy'}
-              </button>
-           </div>
+          </button>
+        </div>
         )}
         {!file?.isPublic && (
            <p className="text-sm text-gray-500 my-4">Enable sharing to get a public download link.</p>
@@ -289,7 +289,7 @@ const ShareModal: React.FC<ShareModalProps> = ({ file, onClose, onToggleShare, i
         {toggleError && (
            <p className="text-red-500 text-sm mb-3">Error: {toggleError}</p>
         )}
-
+        
         <div className="flex justify-end gap-2">
           <button
             onClick={onClose}
@@ -333,18 +333,17 @@ const FilesView: React.FC = () => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // Use environment variable for API base URL
-        const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/api/auth/check`;
-        const response = await fetch(apiUrl, { credentials: 'include' });
-        if (response.ok) {
-          const data = await response.json();
+        // Use apiClient for consistency
+        const response = await apiClient.get('/api/auth/check');
+        // Access data via response.data
+        if (response.data.authenticated) {
           setIsAuthenticated(true);
-          setCurrentUser(data.user);
+          setCurrentUser(response.data.user);
         } else {
           setIsAuthenticated(false);
           setCurrentUser(null);
         }
-      } catch (e) {
+      } catch (e: any) {
         console.error('Auth check failed:', e);
         setError('Could not verify authentication status.');
         setIsAuthenticated(false);
@@ -365,36 +364,14 @@ const FilesView: React.FC = () => {
       setIsLoading(true);
       setError(null);
       try {
-        // Assuming your API is running on localhost:5001
-        const response = await fetch('http://localhost:5001/api/files', {
-          credentials: 'include', 
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json', // Add Accept header
-          },
-        });
+        // Use apiClient
+        // Remove apiUrl definition and fetch call
+        const response = await apiClient.get('/api/files');
         
-        if (response.status === 401) {
-          setIsAuthenticated(false);
-          setError('Please log in to access files.');
-          setIsLoading(false); // Stop loading on auth error
-          return;
-        }
+        // Axios handles non-2xx errors, but check for 401 explicitly if needed (interceptor is better)
+        // if (response.status === 401) { ... }
         
-        if (!response.ok) {
-          // Try to parse error message from backend if possible
-          let errorMessage = `HTTP error! status: ${response.status}`;
-          try {
-            const errorData = await response.json();
-            errorMessage = errorData.message || errorMessage;
-          } catch (jsonError) {
-            // Backend might not have sent JSON
-            console.warn("Could not parse error response as JSON", jsonError);
-          }
-          throw new Error(errorMessage);
-        }
-        
-        const fetchedData = await response.json();
+        const fetchedData = response.data; // Access data via response.data
 
         // Map fetched data to FileItem structure
         const mappedFiles: FileItem[] = fetchedData.map((file: any) => ({
@@ -410,7 +387,13 @@ const FilesView: React.FC = () => {
 
       } catch (e: any) {
         console.error("Failed to fetch files:", e);
-        setError(e.message || "Failed to load files.");
+        // Handle potential Axios error structure
+        if (e.response?.status === 401) {
+            setIsAuthenticated(false);
+            setError('Please log in to access files.');
+        } else {
+            setError(e.response?.data?.message || e.message || "Failed to load files.");
+        }
       } finally {
         setIsLoading(false);
       }
@@ -430,20 +413,16 @@ const FilesView: React.FC = () => {
         formData.append('file', file);
       });
       
-      // Use environment variable for API base URL
-      const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/api/files/upload`;
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        credentials: 'include', // Important for sending session cookies
-        body: formData, // Send the form data
+      // Use apiClient
+      // Remove apiUrl definition and fetch call
+      const response = await apiClient.post('/api/files/upload', formData, {
+          // Need headers for multipart
+          headers: { 
+            'Content-Type': 'multipart/form-data' 
+          }
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || '上傳檔案失敗');
-      }
-
-      const uploadedFileResponse = await response.json();
+      const uploadedFileResponse = response.data; // Access data via response.data
 
       // Access the actual file data from the 'file' property of the response
       const newFileData = uploadedFileResponse.file;
@@ -463,7 +442,7 @@ const FilesView: React.FC = () => {
       }, ...prevFiles]);
     } catch (err: any) {
       console.error('Upload error:', err);
-      setError(err.message || '上傳檔案時發生錯誤');
+      setError(err.response?.data?.message || err.message || '上傳檔案時發生錯誤');
     } finally {
       setUploading(false);
     }
@@ -477,17 +456,9 @@ const FilesView: React.FC = () => {
     }
   
     try {
-      // 调用后端 API 删除文件
-      const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/api/files/${id}`;
-      const response = await fetch(apiUrl, {
-        method: 'DELETE',
-        credentials: 'include', // 确保发送会话 cookie
-      });
-  
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to delete file');
-      }
+      // Use apiClient
+      // Remove apiUrl definition and fetch call
+      await apiClient.delete(`/api/files/${id}`);
   
       // 从前端状态中移除文件
       setFiles((prevFiles) => prevFiles.filter((file) => file.id !== id));
@@ -508,12 +479,11 @@ const FilesView: React.FC = () => {
     setIsTogglingShare(true);
     setShareToggleError(null);
     try {
-      const response = await axios.put(
-        `${import.meta.env.VITE_API_BASE_URL}/api/files/${id}/share`,
-        {}, // No body needed
-        { withCredentials: true }
-      );
-      // Update the file status in the local state
+      // Use apiClient
+      // Remove axios.put call
+      const response = await apiClient.put(`/api/files/${id}/share`);
+      
+      // Update the file status in the local state (using response.data)
       setFiles(prevFiles =>
         prevFiles.map(f =>
           f.id === id ? { ...f, isPublic: response.data.isPublic } : f
@@ -535,17 +505,9 @@ const FilesView: React.FC = () => {
   const handleLogout = async () => {
     setError(null);
     try {
-      // Use environment variable for API base URL
-      const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/api/auth/logout`;
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Logout failed');
-      }
+      // Use apiClient
+      // Remove apiUrl definition and fetch call
+      await apiClient.post('/api/auth/logout');
 
       // Clear state and update auth status
       setIsAuthenticated(false);

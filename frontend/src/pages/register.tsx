@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import apiClient from '../apiClient'; // Import apiClient
 
 const RegisterPage: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -27,21 +28,18 @@ const RegisterPage: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // Use environment variable for API base URL
-      const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/api/auth/register`;
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, email, password }), // Role defaults to 'user' in backend model
-      });
+      // Use apiClient instead of fetch
+      // Remove baseUrl and apiUrl definitions
+      const response = await apiClient.post('/api/auth/register', { username, email, password });
 
-      const data = await response.json();
+      // Access data via response.data
+      const data = response.data;
 
-      if (!response.ok) {
-        throw new Error(data.message || 'Registration failed');
-      }
+      // Axios throws on non-2xx, but backend might still return error message in data
+      // Consider checking response.data structure if backend sends { success: false, message: '...' } on 200 OK
+      // if (!data.success) { 
+      //   throw new Error(data.message || 'Registration failed according to response');
+      // }
 
       // Registration successful, redirect to login page
       console.log('Registration successful:', data);

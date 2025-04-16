@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Users, FolderPlus, File, Image, FileText, Music, Video, Upload, UserPlus, Trash2, Download } from 'lucide-react';
-import axios from 'axios';
+import apiClient from '../apiClient'; // Import the centralized client
 import AddMemberModal from '../components/AddMemberModal';
 
 // --- Interfaces (Keep these) ---
@@ -65,9 +65,9 @@ const GroupFiles: React.FC = () => {
       setIsLoadingGroups(true);
       setError(null);
       try {
-        const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/groups`, {
-          withCredentials: true, // Send cookies
-        });
+        // Use apiClient
+        const response = await apiClient.get('/api/groups'); // No config needed if defaults are set in apiClient
+        
         // Map backend response (_id to id)
         const fetchedGroups = response.data.map((group: any) => ({ 
             id: group._id, 
@@ -95,9 +95,8 @@ const GroupFiles: React.FC = () => {
     setCurrentMembers([]); // Clear previous details
     setCurrentFiles([]);
     try {
-      const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/groups/${groupId}`, {
-        withCredentials: true,
-      });
+      // Use apiClient
+      const response = await apiClient.get(`/api/groups/${groupId}`);
       
       // Extract data from response
       const { group: groupDetails, files: groupFiles } = response.data;
@@ -145,11 +144,12 @@ const GroupFiles: React.FC = () => {
     setError(null);
     // Add loading state if needed
     try {
-      const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/groups`, 
-        { name: newGroupName.trim() }, 
-        { withCredentials: true }
+      // Use apiClient
+      const response = await apiClient.post('/api/groups', 
+        { name: newGroupName.trim() } 
+        // No need for { withCredentials: true } here if set globally
       );
-      const newGroup = { id: response.data._id, name: response.data.name }; // Adjust based on API response
+      const newGroup = { id: response.data._id, name: response.data.name }; // Axios response data is in response.data
       setGroups([...groups, newGroup]);
       setSelectedGroupId(newGroup.id);
       setViewMode('details');
@@ -173,9 +173,8 @@ const GroupFiles: React.FC = () => {
     setFileActionError(null);
 
     try {
-      await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/api/files/${fileId}`, {
-        withCredentials: true,
-      });
+      // Use apiClient
+      await apiClient.delete(`/api/files/${fileId}`);
       // Remove file from state on success
       setCurrentFiles(prevFiles => prevFiles.filter(f => f.id !== fileId));
       console.log(`File ${fileId} deleted successfully.`);
@@ -191,7 +190,8 @@ const GroupFiles: React.FC = () => {
   // Add download handler
   const handleDownloadGroupFile = (fileId: string) => {
     // Construct the download URL using environment variable
-    const downloadUrl = `${import.meta.env.VITE_API_BASE_URL}/api/files/download/${fileId}`;
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
+    const downloadUrl = `${baseUrl}/api/files/download/${fileId}`;
     // Open the URL in a new tab (or same tab) to trigger download
     window.open(downloadUrl, '_blank');
     // Optionally track download interaction if needed
@@ -211,10 +211,10 @@ const GroupFiles: React.FC = () => {
     setAddMemberLoading(true);
     setAddMemberError(null);
     try {
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/api/groups/${selectedGroupId}/members`,
-        { identifier }, // Send identifier (username or email)
-        { withCredentials: true }
+      // Use apiClient
+      const response = await apiClient.post(
+        `/api/groups/${selectedGroupId}/members`,
+        { identifier } // Send identifier (username or email)
       );
       // Update the members list with the response from the server
       setCurrentMembers(response.data.map((m: any) => ({ 
@@ -253,11 +253,12 @@ const GroupFiles: React.FC = () => {
     formData.append('file', file);
 
     try {
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/api/groups/${selectedGroupId}/files`,
+      // Use apiClient
+      const response = await apiClient.post(
+        `/api/groups/${selectedGroupId}/files`,
         formData,
         {
-          withCredentials: true,
+          // Still need headers for multipart/form-data
           headers: {
             'Content-Type': 'multipart/form-data',
           },
@@ -265,7 +266,7 @@ const GroupFiles: React.FC = () => {
       );
 
       // Add the newly uploaded file to the state
-      const newFileData = response.data.file; // Assuming backend returns the populated file object
+      const newFileData = response.data.file; // Axios data is in response.data
       const newFile: GroupFile = {
           id: newFileData._id,
           name: newFileData.originalName,

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, User } from 'lucide-react';
+import apiClient from '../apiClient'; // Import apiClient
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -15,27 +16,17 @@ const LoginPage: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // Use environment variable for API base URL
-      const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/api/auth/login`;
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ username, password }),
-      });
+      // Use apiClient instead of fetch
+      // Remove baseUrl and apiUrl definitions
+      const response = await apiClient.post('/api/auth/login', { username, password });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Login failed');
-      }
-
-      const data = await response.json();
+      // Axios automatically throws for non-2xx, so no need for response.ok check
+      // Access data via response.data
+      const data = response.data;
 
       if (!data.success) {
-        throw new Error(data.message || 'Login failed');
+        // Backend might still send 200 OK with success: false
+        throw new Error(data.message || 'Login failed according to response data');
       }
 
       // Login successful, redirect to home page and force refresh

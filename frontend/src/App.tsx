@@ -9,19 +9,14 @@ import FilesPage from './pages/files';
 import SettingsPage from './pages/settings';
 import UsersPage from './pages/users';
 import GroupFiles from './pages/GroupFiles'; // Import the new component
+import apiClient from './apiClient'; // Import apiClient
 import './styles/globals.css';
 
 function App() {
   useEffect(() => {
     const incrementPageView = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/analytics/page-view`, {
-          method: 'POST',
-          credentials: 'include', // 确保发送会话 cookie
-        });
-        if (!response.ok) {
-          throw new Error('Failed to increment page view');
-        }
+        await apiClient.post('/api/analytics/page-view');
         console.log('Page view incremented');
       } catch (error) {
         console.error('Error incrementing page view:', error);

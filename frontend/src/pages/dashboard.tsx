@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Upload, Download, Trash2, Share2 } from 'lucide-react';
+import apiClient from '../apiClient'; // Import apiClient
 
 // Mock analytics tracking function
 const trackEvent = (eventName: string, eventData: Record<string, any>) => {
@@ -28,12 +29,15 @@ const DashboardView: React.FC = () => {
     // Fetch data from APIs
     const fetchData = async () => {
       try {
-        const pageViewsResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/analytics/page-views`);
-        const userInteractionsResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/analytics/user-interactions`);
-        const fileTypeDistribution = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/analytics/file-type-distribution`);
-        const pageViews = await pageViewsResponse.json();
-        const userInteractions = await userInteractionsResponse.json();
-        const distribution = await fileTypeDistribution.json();
+        // Use apiClient, remove baseUrl
+        const pageViewsResponse = await apiClient.get('/api/analytics/page-views');
+        const userInteractionsResponse = await apiClient.get('/api/analytics/user-interactions');
+        const fileTypeDistributionResponse = await apiClient.get('/api/analytics/file-type-distribution');
+
+        // Access data from response.data
+        const pageViews = pageViewsResponse.data;
+        const userInteractions = userInteractionsResponse.data;
+        const distribution = fileTypeDistributionResponse.data;
 
         setDistributionData(distribution);
         setPageViewsData(pageViews);
