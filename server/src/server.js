@@ -34,6 +34,7 @@ const allowedOrigins = [
   'https://file-sharing-system-git-main-chris-projects-afd41ab0.vercel.app', // Vercel preview domain 1
   'https://file-sharing-system-lj26933kt-chris-projects-afd41ab0.vercel.app', // Vercel preview domain 2
   'https://chris12420.github.io/File_Sharing_System/', // GitHub Pages domain
+  'https://file-sharing-system-1-h36c.onrender.com/',
   'http://localhost:3000' // Local development
 ];
 
