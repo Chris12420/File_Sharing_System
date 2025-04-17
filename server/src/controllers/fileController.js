@@ -11,12 +11,11 @@ const asyncHandler = require('express-async-handler');
 
 
 
-const updateUserInteraction = async (action, increment = true) => {
+const updateUserInteraction = async (action) => {
   try {
-    const update = increment ? { $inc: { count: 1 } } : { $inc: { count: -1 } }; // 根据 increment 决定增减
     const interaction = await UserInteraction.findOneAndUpdate(
       { action },
-      update,
+      { $inc: { count: 1 } }, // 增加 count 字段的值
       { new: true, upsert: true } // 如果不存在则创建
     );
     console.log(`User interaction updated: ${action}, new count: ${interaction.count}`);
@@ -432,14 +431,7 @@ const toggleSharing = asyncHandler(async (req, res) => {
   await file.save();
 
   console.log(`Sharing status for file ${fileId} toggled to: ${file.isPublic}`);
-  if(file.isPublic==true){
-    console.log(`File ${fileId} is now shared publicly.`);
-    updateUserInteraction('Share',true);
-  }else{
-    console.log(`File ${fileId} is no longer shared publicly.`);
-    updateUserInteraction('Share',false);
-  }
-
+  
   // Return the updated file metadata (or just the status)
   res.status(200).json({
       id: file._id,

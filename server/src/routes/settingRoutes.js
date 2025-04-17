@@ -13,3 +13,5 @@ router.put('/profile', settingController.updateUserProfile);
 router.put('/password', settingController.updateUserPassword);
 
 module.exports = router; 
+ 
+ 
