@@ -62,6 +62,10 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // If you handle form data
 
+// Import and use the Geo Metrics Collector Middleware
+const geoMetricsCollector = require('./middleware/geoMetricsCollector');
+app.use(geoMetricsCollector); // Apply middleware globally
+
 // Session middleware setup
 app.use(session({
   secret: process.env.SESSION_SECRET, // Use a strong secret from environment variables
@@ -93,6 +97,7 @@ const authRoutes = require('./routes/authRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes.js');
 const groupRoutes = require('./routes/groupRoutes');
 const settingRoutes = require('./routes/settingRoutes');
+const geoMetricsRoutes = require('./routes/geoMetricsRoutes');
 
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/files', fileRoutes);
@@ -100,13 +105,41 @@ app.use('/api/users', userRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/groups', groupRoutes);
 app.use('/api/settings', settingRoutes);
+app.use('/api/geo-metrics', geoMetricsRoutes);
 
 // Define the port
 const PORT = process.env.PORT || 5001; // Use environment variable or default to 5001
 
 // Start the server
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+console.log(`Attempting to start server on port ${PORT}...`); // Added log
+const server = app.listen(PORT, () => { // Assign to 'server' variable
+  console.log(`Server successfully started and running on port ${PORT}`); // Modified log
+});
+
+// Add error handling for the server instance
+server.on('error', (error) => {
+  if (error.syscall !== 'listen') {
+    throw error;
+  }
+
+  const bind = typeof PORT === 'string'
+    ? 'Pipe ' + PORT
+    : 'Port ' + PORT;
+
+  // Handle specific listen errors with friendly messages
+  switch (error.code) {
+    case 'EACCES':
+      console.error(`${bind} requires elevated privileges`);
+      process.exit(1);
+      break;
+    case 'EADDRINUSE':
+      console.error(`${bind} is already in use`);
+      process.exit(1);
+      break;
+    default:
+      console.error('Server startup failed with error:', error); // Log the full error
+      throw error;
+  }
 });
 
 module.exports = app; // Export the app for potential testing
