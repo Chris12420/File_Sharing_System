@@ -23,7 +23,9 @@ const app = express();
 // --- Trust Proxy ---
 // Necessary for secure cookies when behind a reverse proxy like Render's
 // Trust the first proxy (Render's load balancer)
-app.set('trust proxy', 1); // Always trust proxy since secure cookie is always needed
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
 
 // --- CORS Configuration ---
 // Define allowed origins
@@ -70,10 +72,12 @@ app.use(session({
     collectionName: 'sessions' // Optional: specify session collection name
   }),
   cookie: {
-    secure: true, // ALWAYS use secure cookies because SameSite=None requires it
+    secure: process.env.NODE_ENV === 'production', // Use secure cookies in production (needs HTTPS)
     httpOnly: true, // Prevent client-side JS from accessing the cookie
     maxAge: 1000 * 60 * 60 * 24, // Cookie expiration time (e.g., 1 day)
-    sameSite: 'none' // ALWAYS use 'none' for cross-site cookies
+    // Use 'none' for cross-site cookies (Vercel <-> Render) in production
+    // Use 'lax' for local development or same-site scenarios
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
   }
 }));
 
