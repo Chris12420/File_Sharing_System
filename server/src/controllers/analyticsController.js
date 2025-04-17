@@ -63,11 +63,14 @@ const getFileTypeDistribution = async (req, res) => {
 // Increment PageView for the current day
 const incrementPageView = async () => {
   try {
-    const today = new Date().toISOString().split('T')[0]; // 获取当前日期 (YYYY-MM-DD)
+    const now = new Date();
+    const beijingTime = new Date(now.getTime() + 8 * 60 * 60 * 1000); // UTC+8 timezone(beijing time)
+    const today = beijingTime.toISOString().split('T')[0];
+
     const pageView = await PageView.findOneAndUpdate(
-      { name: today }, // 查找当天的记录
-      { $inc: { value: 1 } }, // 将 value 字段加 1
-      { new: true, upsert: true } // 如果不存在则创建
+      { name: today },
+      { $inc: { value: 1 } },
+      { new: true, upsert: true } 
     );
     console.log(`Page view incremented for ${today}:`, pageView.value);
   } catch (error) {
