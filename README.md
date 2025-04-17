@@ -58,6 +58,20 @@ A web-based interactive file sharing system built with the MERN stack (MongoDB, 
     *   Replace `your_mongodb_connection_string` with your actual MongoDB connection string (e.g., from MongoDB Atlas).
     *   Replace `your_strong_random_session_secret` with a long, random string for session security.
 
+5.  **Set up Environment Variables (Frontend)**
+    *   Navigate to the `frontend` directory.
+    *   Create a `.env` file.
+    *   Add the `VITE_API_BASE_URL` variable. This tells the frontend where to find the backend API:
+        *   **For Local Development:** Set it to your local backend server URL.
+          ```env
+          VITE_API_BASE_URL=http://localhost:5001
+          ```
+        *   **For Production/Deployment:** Set it to your deployed backend server URL (e.g., your Render Web Service URL). **Do not commit this URL if it contains sensitive info.** Manage production variables through your hosting provider's dashboard (like Render Environment Variables).
+          ```env
+          # Example for Render deployment:
+          VITE_API_BASE_URL=https://your-backend-app-name.onrender.com 
+          ```
+
 ## Running the Application
 
 1.  **Start the Backend Server:**
