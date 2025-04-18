@@ -30,6 +30,7 @@ if (process.env.NODE_ENV === 'production') {
 // --- CORS Configuration ---
 // Define allowed origins
 const allowedOrigins = [
+  'https://file-sharing-system-3.onrender.com',
   'https://file-sharing-system-1-h36c.onrender.com',
   'https://file-sharing-system-phi.vercel.app', // Vercel main domain
   'https://file-sharing-system-git-main-chris-projects-afd41ab0.vercel.app', // Vercel preview domain 1
