@@ -13,7 +13,7 @@ A web-based interactive file sharing system built with the MERN stack (MongoDB, 
 
 ## Tech Stack
 
-*   **Backend**: Node.js, Express.js, MongoDB (with Mongoose and GridFS), JWT (for auth), bcryptjs (for password hashing), express-session, connect-mongo, multer (for handling file uploads in memory before streaming to GridFS)
+*   **Backend**: Node.js, Express.js, MongoDB (with Mongoose and GridFS), bcryptjs (for password hashing), express-session, connect-mongo, multer (for handling file uploads in memory before streaming to GridFS)
 *   **Frontend**: React, TypeScript, Tailwind CSS, Lucide Icons
 
 ## Prerequisites
@@ -42,35 +42,26 @@ A web-based interactive file sharing system built with the MERN stack (MongoDB, 
     npm install
     ```
 
-4.  **(CAN SKIP THIS PART!!!!!!!!!!!!)** 
-    **The current project's .env file is already configured with our project MongoDB** 
-
-    **Set up Environment Variables (Backend)** 
+4.  **Set up Environment Variables (Backend - for Local Development)**
     *   Navigate to the `server` directory.
-    *   Create a `.env` file.
-    *   Add the following variables:
+    *   Create a `.env` file if it doesn't exist.
+    *   Ensure it contains the following variables (the current project's `.env` is pre-configured for the shared Atlas DB):
         ```env
-        MONGODB_URI=your_mongodb_connection_string # If setting up from scratch, replace with your MongoDB connection string. (The current project's .env file is already configured). Ensure the database user has readWrite permissions.
-        SESSION_SECRET=your_strong_random_session_secret # Replace with a strong secret
-        # DB_NAME=fileShareDB # Typically included in the MONGODB_URI
-        # NODE_ENV=development # Optional: Set to 'production' for production builds
+        MONGODB_URI=mongodb+srv://chrisworks1102:1IAfFdhFNO8x5CCx@cluster0.yqje5if.mongodb.net/fileShareDB?retryWrites=true&w=majority&appName=Cluster0
+        SESSION_SECRET=B28CF9CAFBB5BFAB3F3114AC58BD1 # Replace with your own strong secret if preferred
+        # NODE_ENV=development # Typically defaults to development if not set
+        # NODE_ENV=production  # Keep this commented out for local development
         ```
-    *   Replace `your_mongodb_connection_string` with your actual MongoDB connection string (e.g., from MongoDB Atlas).
-    *   Replace `your_strong_random_session_secret` with a long, random string for session security.
+    *   **Note:** For local development, `NODE_ENV` should generally *not* be set to `production` as this affects features like secure cookies.
 
-5.  **Set up Environment Variables (Frontend)**
+5.  **Set up Environment Variables (Frontend - for Local Development)**
     *   Navigate to the `frontend` directory.
-    *   Create a `.env` file.
-    *   Add the `VITE_API_BASE_URL` variable. This tells the frontend where to find the backend API:
-        *   **For Local Development:** Set it to your local backend server URL.
-          ```env
-          VITE_API_BASE_URL=http://localhost:5001
-          ```
-        *   **For Production/Deployment:** Set it to your deployed backend server URL (e.g., your Render Web Service URL). **Do not commit this URL if it contains sensitive info.** Manage production variables through your hosting provider's dashboard (like Render Environment Variables).
-          ```env
-          # Example for Render deployment:
-          VITE_API_BASE_URL=https://your-backend-app-name.onrender.com 
-          ```
+    *   Create a `.env` file if it doesn't exist.
+    *   Add the `VITE_API_BASE_URL` variable pointing to your local backend server:
+        ```env
+        VITE_API_BASE_URL=http://localhost:5001
+        ```
+    *   **Note:** When deploying, you'll need to configure the production `VITE_API_BASE_URL` via your hosting provider's environment variables (e.g., on Render), *not* by committing the production URL in this `.env` file.
 
 ## Running the Application
 
