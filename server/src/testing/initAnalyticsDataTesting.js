@@ -17,14 +17,15 @@ const insertTestData = async () => {
 
     console.log('Inserting test data into MongoDB...');
 
+    //simulate last 7 days of data
     const getLast7Days = () => {
       const days = [];
       for (let i = 6; i >= 0; i--) {
         const date = new Date();
         date.setDate(date.getDate() - i);
         days.push({
-          name: date.toISOString().split('T')[0], // 格式化为 YYYY-MM-DD
-          value: Math.floor(Math.random() * 200) + 100, // 随机生成 100-300 的值
+          name: date.toISOString().split('T')[0], 
+          value: Math.floor(Math.random() * 200) + 100, 
         });
       }
       return days;
