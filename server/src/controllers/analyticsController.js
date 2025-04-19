@@ -3,7 +3,9 @@ const File = require('../models/File');
 // Controller methods
 const getPageViews = async (req, res) => {
   try {
-    const pageViews = await PageView.find().sort({ name: 1 }); // 按日期排序
+    const pageViews = await PageView.find()
+      .sort({ name: -1 }) 
+      .limit(7); 
     res.status(200).json(pageViews);
   } catch (error) {
     console.error('Error fetching page views:', error);
@@ -13,7 +15,7 @@ const getPageViews = async (req, res) => {
 
 const getUserInteractions = async (req, res) => {
   try {
-    const userInteractions = await UserInteraction.find().sort({ count: -1 }); // 按交互次数降序排序
+    const userInteractions = await UserInteraction.find().sort({ count: -1 });
     res.status(200).json(userInteractions);
   } catch (error) {
     console.error('Error fetching user interactions:', error);
@@ -23,34 +25,30 @@ const getUserInteractions = async (req, res) => {
 
 const getFileTypeDistribution = async (req, res) => {
   try {
-    // 获取所有文件类型及其数量
     const fileTypeCounts = await File.aggregate([
       {
         $group: {
           _id: {
             $cond: [
-              { $ifNull: ["$mimeType", false] }, // 如果 mimeType 为 null
-              { $arrayElemAt: [{ $split: ["$mimeType", "/"] }, 0] }, // 提取主类型
-              "Other" // 如果 mimeType 为 null，则设置为 "Other"
+              { $ifNull: ["$mimeType", false] }, 
+              { $arrayElemAt: [{ $split: ["$mimeType", "/"] }, 0] },
+              "Other" 
             ]
           },
-          count: { $sum: 1 } // 统计每种类型的数量
+          count: { $sum: 1 } 
         }
       }
     ]);
 
-    // 计算总文件数
     const totalFiles = fileTypeCounts.reduce((sum, fileType) => sum + fileType.count, 0);
 
-    // 如果没有文件，返回提示信息
     if (totalFiles === 0) {
       return res.status(200).json({ message: "No files found in the database." });
     }
 
-    // 格式化数据为前端需要的格式
     const fileTypeDistribution = fileTypeCounts.map((fileType) => ({
-      fileName: fileType._id || "Other", // 主类型或 "Other"
-      value: ((fileType.count / totalFiles) * 100).toFixed(2) // 百分比值，保留两位小数
+      fileName: fileType._id || "Other", 
+      value: ((fileType.count / totalFiles) * 100).toFixed(2) 
     }));
 
     res.status(200).json(fileTypeDistribution);
