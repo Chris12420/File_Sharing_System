@@ -59,8 +59,7 @@ A web-based interactive file sharing system built with the MERN stack (MongoDB, 
     *   Replace `your_strong_random_session_secret` with a long, random string for session security.
 
 5.  **Set up Environment Variables (Frontend)**
-    *   Navigate to the `frontend` directory.
-    *   Create a `.env` file.
+    *   Navigate to the `frontend/.env` file.
     *   Add the `VITE_API_BASE_URL` variable. This tells the frontend where to find the backend API:
         *   **For Local Development:** Set it to your local backend server URL.
           ```env

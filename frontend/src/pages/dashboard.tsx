@@ -3,8 +3,8 @@ import { Upload, Download, Trash2, Share2 } from 'lucide-react';
 import apiClient from '../apiClient'; // Import apiClient
 import { AxiosResponse } from 'axios';
 
-// Country metrics from API
-interface CountryMetric {
+// Legacy metrics interfaces to be used only for API consumption
+interface CountryMetricAPI {
   country: string;
   visits: number;
   uniqueVisitorCount: number;
@@ -16,25 +16,23 @@ interface CountryMetric {
 interface CountryMetricsResponse {
   totalRecords: number;
   uniqueVisitors: number;
-  countries: CountryMetric[];
+  countries: CountryMetricAPI[];
 }
 
-// City metrics from API
-interface CityMetric {
-  city: string;
-  region?: string;
-  country?: string;
+// City metrics interfaces are removed as they're no longer used
+
+// Location metrics for the UI
+interface LocationMetric {
+  name: string;
+  type: 'country'; // Only countries are used now
   visits: number;
-  uniqueVisitorCount: number;
-  coordinates?: {
-    latitude?: number;
-    longitude?: number;
-  };
+  percentage: string;
 }
 
-interface CityMetricsResponse {
-  totalCities: number;
-  cities: CityMetric[];
+interface LocationMetricsResponse {
+  totalRecords: number;
+  totalLocations: number;
+  locations: LocationMetric[];
 }
 
 // Browser metrics from API
@@ -61,14 +59,6 @@ interface DeviceMetricsResponse {
   devices: DeviceMetric[];
 }
 
-// Combined geo metrics
-interface GeoMetrics {
-  countries: any[];
-  cities: any[];
-  browsers?: BrowserMetric[];
-  devices?: DeviceMetric[];
-}
-
 // Mock analytics tracking function
 const trackEvent = (eventName: string, eventData: Record<string, any>) => {
   console.log(`Event Tracked: ${eventName}`, eventData);
@@ -87,11 +77,13 @@ const DashboardView: React.FC = () => {
   const [pageViewsData, setPageViewsData] = useState<{ name: string; value: number }[]>([]);
   const [userBehaviorData, setUserBehaviorData] = useState<{ action: string; count: number }[]>([]);
   const [fileTypeDistributionData, setDistributionData] = useState<{ fileName: string; value: number }[]>([]);
-  const [countryMetrics, setCountryMetrics] = useState<CountryMetricsResponse | null>(null);
-  const [cityMetrics, setCityMetrics] = useState<CityMetricsResponse | null>(null);
+  const [locationMetrics, setLocationMetrics] = useState<LocationMetricsResponse>({ 
+    totalRecords: 0, 
+    totalLocations: 0, 
+    locations: [] 
+  });
   const [browserMetrics, setBrowserMetrics] = useState<BrowserMetricsResponse | null>(null);
   const [deviceMetrics, setDeviceMetrics] = useState<DeviceMetricsResponse | null>(null);
-  const [geoMetrics, setGeoMetrics] = useState<GeoMetrics>({ countries: [], cities: [] });
   const [geolocationError, setGeolocationError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -138,46 +130,49 @@ const DashboardView: React.FC = () => {
     const fetchGeoMetrics = async () => {
       try {
         // Use fetch with VITE_API_BASE_URL instead of apiClient
-        const [countriesResponse, citiesResponse, browsersResponse, devicesResponse] = await Promise.all([
+        const [countriesResponse, browsersResponse, devicesResponse] = await Promise.all([
           fetch(`${import.meta.env.VITE_API_BASE_URL}/api/geo-metrics/countries`),
-          fetch(`${import.meta.env.VITE_API_BASE_URL}/api/geo-metrics/cities`),
           fetch(`${import.meta.env.VITE_API_BASE_URL}/api/geo-metrics/browsers`),
           fetch(`${import.meta.env.VITE_API_BASE_URL}/api/geo-metrics/devices`)
         ]);
         
         // Check if any response failed
         if (!countriesResponse.ok) throw new Error(`Failed to fetch country metrics: ${countriesResponse.status} ${countriesResponse.statusText}`);
-        if (!citiesResponse.ok) throw new Error(`Failed to fetch city metrics: ${citiesResponse.status} ${citiesResponse.statusText}`);
         if (!browsersResponse.ok) throw new Error(`Failed to fetch browser metrics: ${browsersResponse.status} ${browsersResponse.statusText}`);
         if (!devicesResponse.ok) throw new Error(`Failed to fetch device metrics: ${devicesResponse.status} ${devicesResponse.statusText}`);
 
         // Parse the JSON responses
-        const countriesData = await countriesResponse.json();
-        const citiesData = await citiesResponse.json();
-        const browsersData = await browsersResponse.json();
-        const devicesData = await devicesResponse.json();
+        const countriesData = await countriesResponse.json() as CountryMetricsResponse;
+        const browsersData = await browsersResponse.json() as BrowserMetricsResponse;
+        const devicesData = await devicesResponse.json() as DeviceMetricsResponse;
         
-        // Set metrics data
-        setCountryMetrics(countriesData);
-        setCityMetrics(citiesData);
+        // Set metrics data for browsers and devices
         setBrowserMetrics(browsersData);
         setDeviceMetrics(devicesData);
 
-        // Also set combined metrics for backward compatibility (or potentially remove if not needed elsewhere)
-        setGeoMetrics({ 
-          countries: countriesData.countries || [], 
-          cities: citiesData.cities || [],
-          browsers: browsersData.browsers || [],
-          devices: devicesData.devices || []
+        // Transform country data into a unified locations array
+        const locations: LocationMetric[] = 
+          // Add countries only
+          countriesData.countries.map(country => ({
+            name: country.country || 'Unknown Country',
+            type: 'country' as const,
+            visits: country.visits,
+            percentage: country.visitPercentage
+          })).sort((a, b) => b.visits - a.visits);
+
+        // Set location metrics with only country data
+        setLocationMetrics({
+          totalRecords: countriesData.totalRecords,
+          totalLocations: countriesData.countries.length,
+          locations: locations
         });
+
         setGeolocationError(null); // Clear error on success
       } catch (error) {
         console.error('Error fetching geographical metrics:', error);
         setGeolocationError(`Failed to load geographical metrics. ${error instanceof Error ? error.message : 'Unknown error'}`);
-        // Set empty/null state on error for all geo-related data
-        setGeoMetrics({ countries: [], cities: [], browsers: [], devices: [] }); 
-        setCountryMetrics(null);
-        setCityMetrics(null);
+        // Set empty state on error for all geo-related data
+        setLocationMetrics({ totalRecords: 0, totalLocations: 0, locations: [] });
         setBrowserMetrics(null);
         setDeviceMetrics(null);
       }
@@ -202,18 +197,10 @@ const DashboardView: React.FC = () => {
     }
   };
 
-  // Format city location string
-  const formatCityString = (city: CityMetric): string => {
-    return [city.city, city.region, city.country].filter(Boolean).join(', ') || 'Unknown Location';
-  };
+  const isGeoDataLoading = loading && (!locationMetrics || locationMetrics.locations.length === 0);
+  const hasGeoData = Boolean(locationMetrics && locationMetrics.locations.length > 0);
 
-  const isGeoDataLoading = loading && (!countryMetrics || !cityMetrics);
-  const hasGeoData = Boolean(
-    (countryMetrics?.countries && countryMetrics.countries.length > 0) || 
-    (cityMetrics?.cities && cityMetrics.cities.length > 0)
-  );
-
-  if (loading && (!countryMetrics && !cityMetrics)) {
+  if (loading && (!locationMetrics || locationMetrics.locations.length === 0)) {
     return <div className="p-6">Loading Dashboard Data...</div>;
   }
 
@@ -223,7 +210,7 @@ const DashboardView: React.FC = () => {
 
       {/* Page Views Section */}
       <div className="mb-8">
-      <h2 className="text-xl font-semibold mb-4">Page Views (Last 7 Days)</h2>
+      <h2 className="text-xl font-semibold mb-4">Page Views</h2>
       <div className="bg-white rounded-lg shadow p-6">
         <div className="h-64 flex items-end">
           {pageViewsData.map((item, index) => (
@@ -311,7 +298,7 @@ const DashboardView: React.FC = () => {
             </div>
           </div> */}
           
-
+          <div className="mb-8">
           <div className="bg-white rounded-lg shadow p-6">
   <h3 className="font-medium mb-4">File Type Distribution (Bar Chart)</h3>
   <div className="h-64 flex items-end">
@@ -329,15 +316,13 @@ const DashboardView: React.FC = () => {
       );
     })}
   </div>
-  <div className="mt-4 text-gray-600 text-sm">
-  </div>
+</div>
 </div>
 
       {/* Geolocation Section */}
       <div className="mb-8">
         <h2 className="text-xl font-semibold mb-4">Geographic Access Data</h2>
         <div className="bg-white rounded-lg shadow p-6">
-          
           {isGeoDataLoading && <p>Loading location data...</p>}
           {geolocationError && <p className="text-red-500">Error: {geolocationError}</p>}
           
@@ -346,39 +331,28 @@ const DashboardView: React.FC = () => {
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <h3 className="font-medium text-gray-700 mb-1">Total Visits</h3>
-                  <p className="text-2xl font-bold">{countryMetrics?.totalRecords || 0}</p>
+                  <p className="text-2xl font-bold">{locationMetrics.totalRecords || 0}</p>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="font-medium text-gray-700 mb-1">Cities Reached</h3>
-                  <p className="text-2xl font-bold">{cityMetrics?.totalCities || 0}</p>
+                  <h3 className="font-medium text-gray-700 mb-1">Locations</h3>
+                  <p className="text-2xl font-bold">{locationMetrics.totalLocations || 0}</p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Top Countries */}
+              <div>
+                {/* Top Locations */}
                 <div>
-                  <h3 className="font-medium mb-3">Top Countries</h3>
+                  <h3 className="font-medium mb-3">Top Locations</h3>
                   <ul className="divide-y divide-gray-200">
-                    {countryMetrics?.countries.slice(0, 5).map((country, index) => (
-                      <li key={country.country || index} className="py-2 flex justify-between">
-                        <span className="text-sm">{country.country || 'Unknown'}</span>
+                    {locationMetrics.locations.slice(0, 6).map((location, index) => (
+                      <li key={`location-${index}`} className="py-2 flex justify-between">
+                        <span className="text-sm flex items-center">
+                          {location.name}
+                        </span>
                         <div className="flex flex-col items-end">
-                          <span className="text-sm font-medium">{country.visits} visits</span>
-                          <span className="text-xs text-gray-500">({country.visitPercentage}%)</span>
+                          <span className="text-sm font-medium">{location.visits} visits</span>
+                          <span className="text-xs text-gray-500">({location.percentage}%)</span>
                         </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* Top Cities */}
-                <div>
-                  <h3 className="font-medium mb-3">Top Cities</h3>
-                  <ul className="divide-y divide-gray-200">
-                    {cityMetrics?.cities.slice(0, 5).map((city, index) => (
-                      <li key={index} className="py-2 flex justify-between">
-                        <span className="text-sm">{formatCityString(city)}</span>
-                        <span className="text-sm font-medium">{city.visits} visits</span>
                       </li>
                     ))}
                   </ul>
